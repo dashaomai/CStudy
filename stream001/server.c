@@ -110,7 +110,7 @@ int main(int argc, const char *argv[])
 
     if (!fork()) { // this is the child process
       close(sockfd); // child doesn't need the listener
-      if (send(new_fd, "Hello, world!\n", 14, 0) == -1)
+      if (send(new_fd, "Hello, world!", 13, 0) == -1)
         perror("send");
       close(new_fd);
       exit(0);
