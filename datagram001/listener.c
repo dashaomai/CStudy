@@ -60,9 +60,9 @@ int main(int argc, const char *argv[])
     return 2;
   }
 
-  freeaddrinfo(servinfo); // no need to use it.
-
   printf("listener: waiting on %s:%s\n", inet_ntop(p->ai_addr->sa_family, get_in_addr(p->ai_addr), s, sizeof s), MYPORT);
+
+  freeaddrinfo(servinfo); // no need to use it.
 
   addr_len = sizeof their_addr;
   if ((numbytes = recvfrom(sockfd, buf, MAXBUFLEN-1, 0, (struct sockaddr *)&their_addr, &addr_len)) == -1) {

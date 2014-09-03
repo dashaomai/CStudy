@@ -23,6 +23,7 @@ int main(int argc, const char *argv[])
   struct addrinfo hints, *servinfo, *p;
   int rv;
   int numbytes;
+  char s[INET6_ADDRSTRLEN];
 
   if (argc != 3) {
     fprintf(stderr, "usage: talker hostname message\n");
@@ -58,9 +59,9 @@ int main(int argc, const char *argv[])
     return 3;
   }
 
-  freeaddrinfo(servinfo);
+  printf("talker: send %d bytes to %s:%s\n", numbytes, inet_ntop(p->ai_addr->sa_family, get_in_addr(p->ai_addr), s, sizeof s), SERVERPORT);
 
-  printf("talker: send %d bytes to %s:%s\n", numbytes, argv[1], SERVERPORT);
+  freeaddrinfo(servinfo);
   close(sockfd);
 
   return 0;
