@@ -14,7 +14,7 @@
 
 int main(int argc, const char *argv[])
 {
-  fd_set master; // master file descriptor list
+  fd_set master;   // master file descriptor list
   fd_set read_fds; // temp file descriptor list for select()
   int fdmax;       // maximum file descriptor number
 
@@ -23,17 +23,17 @@ int main(int argc, const char *argv[])
   struct sockaddr_storage remoteaddr; // client address
   socklen_t addrlen;
 
-  char buf[256];  // buffer for client data
+  char buf[256];   // buffer for client data
   int nbytes;
 
   char remoteIP[INET6_ADDRSTRLEN];
 
-  int yes=1;  // for setsockopt() SO_REUSEADDR, below
+  int yes=1;       // for setsockopt() SO_REUSEADDR, below
   int i, j, rv;
 
   struct addrinfo hints, *ai, *p;
 
-  FD_ZERO(&master);  // clear the master and temp sets
+  FD_ZERO(&master); // clear the master and temp sets
   FD_ZERO(&read_fds);
 
   // get us a socket and bind it
@@ -69,7 +69,7 @@ int main(int argc, const char *argv[])
     return 2;
   }
 
-  freeaddrinfo(ai); // al done with this
+  freeaddrinfo(ai); // all done with this
 
   // listen
   if (listen(listener, 10) == -1) {
