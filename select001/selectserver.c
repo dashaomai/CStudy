@@ -116,7 +116,7 @@ int main(int argc, const char *argv[])
                 newfd);
           }
         } else {
-          // ahndle data from a client
+          // handle data from a client
           if ((nbytes = recv(i, buf, sizeof buf, 0)) <= 0) {
             // got error or connection closed by client
             if (nbytes == 0) {
