@@ -38,10 +38,10 @@ int main(int argc, const char *argv[])
 
   // get us a socket and bind it
   memset(&hints, 0, sizeof hints);
-  hints.ai_family = AF_UNSPEC;
+  hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags = AI_PASSIVE;
-  if ((rv = getaddrinfo("192.168.0.251", PORT, &hints, &ai)) != 0) {
+  if ((rv = getaddrinfo("0.0.0.0", PORT, &hints, &ai)) != 0) {
     fprintf(stderr, "selectserver: %s\n", gai_strerror(rv));
     return 1;
   }
