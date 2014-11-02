@@ -83,10 +83,11 @@ int main(int argc, const char *argv[])
   };
 
   // 将服务器 fd 转入 st thread 内处理
-  if (st_thread_create(handle_listener, &listener, 0, 0) == NULL) {
+  /*if (st_thread_create(handle_listener, &listener, 0, 0) == NULL) {
     fprintf(stderr, "failed to create the listener thread: %s\n", gai_strerror(errno));
     return 6;
-  }
+  }*/
+  handle_listener(&listener);
 
   return 0;
 }
