@@ -6,6 +6,8 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+#include "../beej/common.h"
+
 #define HOST "0.0.0.0"
 #define PORT "9500"
 
@@ -94,11 +96,11 @@ static void *handle_listener(void *arg) {
   st_netfd_t listener = *(st_netfd_t *)arg;
   arg = NULL;
   st_netfd_t client;
-  struct sockaddr_in from;
+  struct sockaddr from;
   int fromlen = sizeof(from);
 
-  while ((client = st_accept(listener, (struct sockaddr *)&from, &fromlen, ST_UTIME_NO_TIMEOUT)) != NULL) {
-    st_netfd_setspecific(client, &from.sin_addr, NULL);
+  while ((client = st_accept(listener, &from, &fromlen, ST_UTIME_NO_TIMEOUT)) != NULL) {
+    st_netfd_setspecific(client, get_in_addr(&from), NULL);
 
     if (st_thread_create(handle_clientconn, &client, 0, 0) == NULL) {
       fprintf(stderr, "failed to create the client thread: %s\n", gai_strerror(errno));
@@ -106,6 +108,8 @@ static void *handle_listener(void *arg) {
   }
 
   st_netfd_close(listener);
+
+  return 0;
 }
 
 // 服务器取得客户端连接后分配给客户端的独立 ST Thread
@@ -131,4 +135,5 @@ static void *handle_clientconn(void *arg) {
   }
 
   st_netfd_close(client);
+  return 0;
 }
