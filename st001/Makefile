@@ -1,4 +1,4 @@
-ST_ROOT = /home/bob/state-threads/FREEBSD_10.1-PRERELEASE_OPT/
+ST_ROOT = /home/bob/state-threads/obj/
 
 stdemo : stdemo.o
 	cc -L$(ST_ROOT) -lst -o stdemo stdemo.o
