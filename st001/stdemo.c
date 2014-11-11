@@ -28,7 +28,7 @@ int main(int argc, const char *argv[])
   struct addrinfo hints, *ai, *p;
 
   memset(&hints, 0, sizeof hints);
-  hints.ai_family = AF_INET;
+  hints.ai_family = AF_INET; // 使用 IPv4 协议
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags = AI_PASSIVE;
 
