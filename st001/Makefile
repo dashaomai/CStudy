@@ -1,4 +1,4 @@
-ST_ROOT = /Users/bob/Libs/CLibs/state-threads/DARWIN_14.0.0_OPT/
+ST_ROOT = /home/bob/state-threads/obj/
 
 stdemo : stdemo.o
 	cc -L$(ST_ROOT) -lst -o stdemo stdemo.o
