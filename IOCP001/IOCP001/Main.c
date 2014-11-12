@@ -17,7 +17,7 @@ typedef struct
 	char		buffer[DataBuffSize];
 	int			BufferLen;
 	int			operationType;
-} PER_IO_DATA, *LPPER_IO_DATA;
+} PER_IO_DATA;
 
 /**
  * 结构体：PER_HANDLE_DATA
@@ -27,7 +27,7 @@ typedef struct
 {
 	SOCKET				socket;
 	SOCKADDR_STORAGE	ClientAddr;
-} PER_HANDLE_DATA, *LPPER_HANDLE_DATA;
+} PER_HANDLE_DATA;
 
 #define ERR_EXIT(message, code) fprintf(stderr, messgae);WSACleanup();return code
 
@@ -181,6 +181,8 @@ DWORD WINAPI ServerWorkThread(LPVOID IOCPFD)
 		}
 
 		// 开始接收来自客户端的数据
+		// 在这里运用互斥来独立访问 PerIoData 内部的缓冲区，难道一个 IO 上的多次异步数据流可能被其它线程处理到吗？
+		// 如果设置只有一个工作线程，是不是就可以取消该互斥了？
 		WaitForSingleObject(hMutex, INFINITE);
 		fprintf(stdout, "An client says: %s\n", perIoData->databuff.buf);
 		ReleaseMutex(hMutex);
