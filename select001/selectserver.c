@@ -42,7 +42,7 @@ int main(int argc, const char *argv[])
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags = AI_PASSIVE;
   if ((rv = getaddrinfo(NULL, PORT, &hints, &ai)) != 0) {
-    fprintf(stderr, "selectserver: %s\n", gai_strerror(rv));
+    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
     return 1;
   }
 

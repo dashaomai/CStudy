@@ -5,6 +5,8 @@ VisualStudioVersion = 12.0.30723.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IOCP001", "IOCP001\IOCP001.vcxproj", "{3581A38B-E241-49F9-9751-5DC5F507516D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IOCP002_Echo", "IOCP002_Echo\IOCP002_Echo.vcxproj", "{4E12B9CA-3DF1-433D-967A-EF9E1BDFFBF2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -15,6 +17,10 @@ Global
 		{3581A38B-E241-49F9-9751-5DC5F507516D}.Debug|Win32.Build.0 = Debug|Win32
 		{3581A38B-E241-49F9-9751-5DC5F507516D}.Release|Win32.ActiveCfg = Release|Win32
 		{3581A38B-E241-49F9-9751-5DC5F507516D}.Release|Win32.Build.0 = Release|Win32
+		{4E12B9CA-3DF1-433D-967A-EF9E1BDFFBF2}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4E12B9CA-3DF1-433D-967A-EF9E1BDFFBF2}.Debug|Win32.Build.0 = Debug|Win32
+		{4E12B9CA-3DF1-433D-967A-EF9E1BDFFBF2}.Release|Win32.ActiveCfg = Release|Win32
+		{4E12B9CA-3DF1-433D-967A-EF9E1BDFFBF2}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
