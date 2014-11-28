@@ -16,8 +16,11 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-
+#include <netinet/in.h>
+#include <assert.h>
 #include <st.h>
+
+#include "../beej/common.h"
 
 void start_processes(const int procnum);
 void create_rpc_listeners(void);
@@ -166,9 +169,19 @@ void accept_client(void) {
   }
 
   st_netfd_close(rpc_fd);
-
-  return 0;
 }
+
+#define rpcpkg_len uint16_t
+#define HTON(v) htons(v)
+#define NTOH(v) ntohs(v)
+
+struct rpc_package {
+  rpcpkg_len  total;
+  rpcpkg_len  received;
+  uint8_t     data[sizeof(rpcpkg_len)];
+};
+
+static struct rpc_package *package;
 
 static void *handle_clientconn(void *arg) {
   st_netfd_t client = *(st_netfd_t*)arg;
@@ -178,7 +191,7 @@ static void *handle_clientconn(void *arg) {
   // rpc客户端连入后，会主动发来客户端自己的 index
   // 长度为 1 字节
   char    buf[1024];
-  size_t  len;
+  ssize_t  len;
 
   // 先只读取 1 字节的客户端握手头，表示客户端自己的 index
   if ((len = st_read(client, buf, 1, ST_UTIME_NO_TIMEOUT)) < 0) {
@@ -205,6 +218,14 @@ static void *handle_clientconn(void *arg) {
   }
   fd_list[client_index] = client;
 
+  // 初始化用于读取流的包结构
+  struct rpc_package package;
+  memset((void*)&package, 0, sizeof(package));
+
+  const size_t pkghead_len = sizeof(rpcpkg_len);
+  size_t      receive;
+  size_t      cursor; // 记录数据偏移到了 buf 的什么位置
+
   // 循环服务处理
   for (;;) {
     if ((len = st_read(client, buf, sizeof(buf), ST_UTIME_NO_TIMEOUT)) < 0) {
@@ -212,6 +233,41 @@ static void *handle_clientconn(void *arg) {
       goto close_fd_and_quit;
     } else if (len == 0) {
       goto close_fd_and_quit;
+    } else {
+      // 流进来数据了
+      cursor = 0;
+      while (cursor < len) { // 如果缓冲区内数据没有处理完
+
+        // 如果之前没切过包，或者前一包已经完成
+        if (package.total == package.received) {
+          package.total = NTOH(*(rpcpkg_len *)(buf + cursor));
+
+          if (len - cursor - pkghead_len >= package.total) {
+            package.received = package.total;
+          } else {
+            package.received = len - cursor - pkghead_len;
+          }
+
+          memcpy(&package.data, buf + cursor + pkghead_len, package.received);
+
+          cursor += package.received + pkghead_len;
+        } else {
+          // 现在处理的是断开包
+          assert(package.received < package.total);
+
+          receive = (len >= package.total - package.received) ? package.total - package.received : len;
+
+          memcpy(&package.data + package.received, buf + cursor + pkghead_len, receive);
+
+          package.received += receive;
+          cursor += receive;
+        }
+
+        // 如果刚刚处理过的包已经是完整包，则处决它
+        if (package.received == package.total) {
+          fprintf(stdout, "receive an rpc request with content: %s\n", package.data);
+        }
+      }
     }
   }
 
