@@ -69,7 +69,7 @@ void start_processes(const int procnum)
   for (i = 1; i <= procnum; i++) {
     if ((pid = fork()) < 0) {
       fprintf(stderr, "fork\n");
-      if (i == 0) exit(1);
+      if (i == 1) exit(1);
       fprintf(stderr, "WARN: started only %d processes out of %d\n", i, procnum);
       vp_count = i;
 
