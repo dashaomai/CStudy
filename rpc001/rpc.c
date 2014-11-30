@@ -84,7 +84,6 @@ void start_processes(const int procnum)
       // parent, or master
       vp_count = i;
     }
-    fd_list = (st_netfd_t*)calloc(i, sizeof(st_netfd_t));
   }
 }
 
@@ -150,6 +149,7 @@ void create_rpc_listeners(void) {
   if ((rpc_fd = st_netfd_open(fd)) == NULL)
     err_sys_quit(1, "failed to convert fd into st_fd: %s\n", strerror(errno));
 
+  fd_list = (st_netfd_t*)calloc(vp_count, sizeof(st_netfd_t));
   fd_list[my_index] = rpc_fd;
 }
 
