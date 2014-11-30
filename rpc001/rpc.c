@@ -63,15 +63,12 @@ void start_processes(const int procnum)
   pid_t pid;
   sigset_t mask, omask;
 
-  my_index = 0;
   my_pid = getpid();
+  vp_count = procnum + 1;
 
   for (i = 1; i <= procnum; i++) {
     if ((pid = fork()) < 0) {
-      fprintf(stderr, "fork\n");
-      if (i == 1) exit(1);
-      fprintf(stderr, "WARN: started only %d processes out of %d\n", i, procnum);
-      vp_count = i;
+      err_sys_quit(1, "fork");
 
       break;
     } else if (pid == 0) {
@@ -82,7 +79,7 @@ void start_processes(const int procnum)
       break;
     } else {
       // parent, or master
-      vp_count = i;
+      my_index = 0;
     }
   }
 }
@@ -149,6 +146,7 @@ void create_rpc_listeners(void) {
   if ((rpc_fd = st_netfd_open(fd)) == NULL)
     err_sys_quit(1, "failed to convert fd into st_fd: %s\n", strerror(errno));
 
+  fprintf(stdout, "vp_count at process #%d is %d.\n", my_index, vp_count);
   fd_list = (st_netfd_t*)calloc(vp_count, sizeof(st_netfd_t));
   fd_list[my_index] = rpc_fd;
 }
