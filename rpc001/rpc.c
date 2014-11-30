@@ -190,7 +190,7 @@ static void *handle_clientconn(void *arg) {
   // 握手
   // rpc客户端连入后，会主动发来客户端自己的 index
   // 长度为 1 字节
-  char    buf[1024];
+  char    buf[4096];
   ssize_t  len;
 
   // 先只读取 1 字节的客户端握手头，表示客户端自己的 index
