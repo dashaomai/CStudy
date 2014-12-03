@@ -26,6 +26,8 @@ void start_processes(const int procnum);
 void create_rpc_listeners(void);
 void accept_client(void);
 
+void *make_link_to_peers(void);
+static void *link_to_peers(void *arg);
 static void *handle_clientconn(void *arg);
 
 void err_sys_quit(const int fd, const char *fmt, ...);
@@ -41,6 +43,8 @@ int main(int argc, const char *argv[])
 
   create_rpc_listeners();
 
+  make_link_to_peers();
+
   accept_client();
 
   return 0;
@@ -51,8 +55,8 @@ int   vp_count;
 st_netfd_t   *fd_list;
 st_netfd_t   rpc_fd;
 
-int   my_index;
-pid_t my_pid;
+uint8_t   my_index;
+pid_t     my_pid;
 
 /**
  * 启动工作进程
@@ -167,6 +171,64 @@ void accept_client(void) {
   }
 
   st_netfd_close(rpc_fd);
+}
+
+
+/**
+ * 在独立的线程内建立到其他结点的 rpc 链接
+ */
+void *make_link_to_peers(void) {
+  if (st_thread_create(link_to_peers, NULL, 0, 0) == NULL)
+    fprintf(stderr, "failed to create the peer link thread.\n");
+}
+
+static void *link_to_peers(void *arg) {
+  int client_fd, index, rv;
+  st_netfd_t client;
+  struct addrinfo hints, *ai, *p;
+  const char host = "0.0.0.0";
+  char port[16];
+  char my_idx[1];
+
+  memcpy(my_idx, &my_index)
+
+  for (int i=0; i<vp_count; i++) {
+    if (i == my_index) continue;
+
+    snprintf(port, 16, "%d", RPC_PORT + i);
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = PF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if ((rv = getaddrinfo(host, port, &hints, &ai)) != 0) {
+      fprintf(stderr, "failed to getaddrinfo to peer #%d\n", i);
+      continue;
+    }
+
+    for (p = ai; p != NULL; p = p->ai_next) {
+      if ((client_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) = -1) {
+        continue;
+      }
+
+      if ((client = st_netfd_open(client_fd)) == -1) {
+        close(client_fd);
+        continue;
+      }
+
+      if ((rv = st_connect(client, p->ai_addr, p->ai_addrlen, ST_UTIME_NO_TIMEOUT)) != 0) {
+        st_close(client);
+        close(client_fd);
+        continue;
+      } else {
+        fd_list[i] = client;
+      }
+
+      // 写入 1 字节的 rpc 握手头
+      if ((rv = st_write(client, )))
+    }
+  }
+
 }
 
 #define rpcpkg_len uint16_t
