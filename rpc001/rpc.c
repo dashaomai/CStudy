@@ -129,7 +129,7 @@ void create_rpc_listeners(void) {
   }
 
   if (p == NULL) {
-    err_sys_quit(1, "failed to bind at 0.0.0.0\n");
+    err_sys_quit(1, "[%d] failed to bind at 0.0.0.0\n", my_index);
   }
 
   freeaddrinfo(ai); // all done with this
@@ -138,19 +138,19 @@ void create_rpc_listeners(void) {
   p = NULL;
 
   if (listen(fd, 10) == -1) {
-    err_sys_quit(1, "failed to listen in %d\n", rpc_port);
+    err_sys_quit(1, "[%d] failed to listen in %d\n", my_index, rpc_port);
   }
 
   // 初始化 st 线程
   if (st_init() < 0) {
-    err_sys_quit(1, "failed to init st\n");
+    err_sys_quit(1, "[%d] failed to init st\n", my_index);
   }
 
   // 转换 fd
   if ((rpc_fd = st_netfd_open(fd)) == NULL)
-    err_sys_quit(1, "failed to convert fd into st_fd: %s\n", strerror(errno));
+    err_sys_quit(1, "[%d] failed to convert fd into st_fd: %s\n", my_index, strerror(errno));
 
-  fprintf(stdout, "vp_count at process #%d is %d.\n", my_index, vp_count);
+  fprintf(stdout, "[%d] vp_count is %d.\n", my_index, vp_count);
   fd_list = (st_netfd_t*)calloc(vp_count, sizeof(st_netfd_t));
   fd_list[my_index] = rpc_fd;
 }
@@ -167,7 +167,7 @@ void accept_client(void) {
     st_netfd_setspecific(client, get_in_addr(&from), NULL);
 
     if (st_thread_create(handle_clientconn, &client, 0, 0) == NULL)
-      fprintf(stderr, "failed to create the client thread: %s\n", strerror(errno));
+      fprintf(stderr, "[%d] failed to create the client thread: %s\n", my_index, strerror(errno));
   }
 
   st_netfd_close(rpc_fd);
@@ -179,18 +179,17 @@ void accept_client(void) {
  */
 void *make_link_to_peers(void) {
   if (st_thread_create(link_to_peers, NULL, 0, 0) == NULL)
-    fprintf(stderr, "failed to create the peer link thread.\n");
+    fprintf(stderr, "[%d] failed to create the peer link thread.\n", my_index);
+
+  return 0;
 }
 
 static void *link_to_peers(void *arg) {
   int client_fd, index, rv;
   st_netfd_t client;
   struct addrinfo hints, *ai, *p;
-  const char host = "0.0.0.0";
+  const char *host = "0.0.0.0";
   char port[16];
-  char my_idx[1];
-
-  memcpy(my_idx, &my_index)
 
   for (int i=0; i<vp_count; i++) {
     if (i == my_index) continue;
@@ -202,22 +201,22 @@ static void *link_to_peers(void *arg) {
     hints.ai_socktype = SOCK_STREAM;
 
     if ((rv = getaddrinfo(host, port, &hints, &ai)) != 0) {
-      fprintf(stderr, "failed to getaddrinfo to peer #%d\n", i);
+      fprintf(stderr, "[%d] failed to getaddrinfo to peer #%d\n", my_index, i);
       continue;
     }
 
     for (p = ai; p != NULL; p = p->ai_next) {
-      if ((client_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) = -1) {
+      if ((client_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
         continue;
       }
 
-      if ((client = st_netfd_open(client_fd)) == -1) {
+      if ((client = st_netfd_open(client_fd)) == NULL) {
         close(client_fd);
         continue;
       }
 
       if ((rv = st_connect(client, p->ai_addr, p->ai_addrlen, ST_UTIME_NO_TIMEOUT)) != 0) {
-        st_close(client);
+        st_netfd_close(client);
         close(client_fd);
         continue;
       } else {
@@ -225,9 +224,22 @@ static void *link_to_peers(void *arg) {
       }
 
       // 写入 1 字节的 rpc 握手头
-      if ((rv = st_write(client, )))
+      if ((rv = st_write(client, (char *)&my_index, 1, ST_UTIME_NO_TIMEOUT)) == -1) {
+        fprintf(stderr, "[%d] handshake failed.\n", my_index);
+      }
+
+      fd_list[i] = client;
+      break;
     }
+
+    if (p == NULL) {
+      fprintf(stderr, "[%d] failed to connect to peer #%d.\n", my_index, i);
+    }
+
+    freeaddrinfo(ai);
   }
+
+  return NULL;
 
 }
 
@@ -255,7 +267,7 @@ static void *handle_clientconn(void *arg) {
 
   // 先只读取 1 字节的客户端握手头，表示客户端自己的 index
   if ((len = st_read(client, buf, 1, ST_UTIME_NO_TIMEOUT)) < 0) {
-    fprintf(stderr, "failed to handshake from client: %s\n", strerror(errno));
+    fprintf(stderr, "[%d] failed to handshake from client #%d: %s\n", my_index, *buf, strerror(errno));
     goto close_fd_and_quit;
   } else if (len == 0) {
     goto close_fd_and_quit;
@@ -263,17 +275,17 @@ static void *handle_clientconn(void *arg) {
 
   uint8_t   client_index = (uint8_t)buf[0];
 
-  fprintf(stdout, "来自 rpc 客户端 #%d 的握手已经成功建立\n", client_index);
+  fprintf(stdout, "[%d] 来自 rpc 客户端 #%d 的握手已经成功建立\n", my_index, client_index);
 
   // 如果 client_index 等于自己的 my_index，则这个有问题
   if (client_index == my_index) {
-    fprintf(stderr, "rpc client promet the same index with mine.\n");
+    fprintf(stderr, "[%d] rpc client promet the same index with mine.\n", my_index);
     goto close_fd_and_quit;
   }
 
   // 将客户端 fd 放入属于它 index 的 fd_list 内
   if (fd_list[client_index] != NULL) {
-    fprintf(stderr, "This client #%d has connected before, replace it.\n", client_index);
+    fprintf(stderr, "[%d] This client #%d has connected before, replace it.\n", my_index, client_index);
     st_netfd_close(fd_list[client_index]);
   }
   fd_list[client_index] = client;
@@ -289,7 +301,7 @@ static void *handle_clientconn(void *arg) {
   // 循环服务处理
   for (;;) {
     if ((len = st_read(client, buf, sizeof(buf), ST_UTIME_NO_TIMEOUT)) < 0) {
-      fprintf(stderr, "failed when read from client #%d.\n", client_index);
+      fprintf(stderr, "[%d] failed when read from client #%d.\n", my_index, client_index);
       goto close_fd_and_quit;
     } else if (len == 0) {
       goto close_fd_and_quit;
@@ -325,7 +337,7 @@ static void *handle_clientconn(void *arg) {
 
         // 如果刚刚处理过的包已经是完整包，则处决它
         if (package.received == package.total) {
-          fprintf(stdout, "receive an rpc request with content: %s\n", package.data);
+          fprintf(stdout, "[%d] receive an rpc request with content: %s\n", my_index, package.data);
         }
       }
     }
