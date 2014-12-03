@@ -184,7 +184,7 @@ void *make_link_to_peers(void) {
   if (st_thread_create(link_to_peers, NULL, 0, 0) == NULL)
     fprintf(stderr, "[%d] failed to create the peer link thread.\n", my_index);
 
-  return 0;
+  return NULL;
 }
 
 static void *link_to_peers(void *arg) {
