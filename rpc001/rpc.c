@@ -43,6 +43,9 @@ int main(int argc, const char *argv[])
 
   create_rpc_listeners();
 
+  // 等待各 rpc 结点完成侦听
+  sleep(1);
+
   make_link_to_peers();
 
   accept_client();
@@ -284,11 +287,13 @@ static void *handle_clientconn(void *arg) {
   }
 
   // 将客户端 fd 放入属于它 index 的 fd_list 内
-  if (fd_list[client_index] != NULL) {
+  // 在前面的 make link to peers 当中，已经把写去远程结点的 st_netfd_t 保存于 fd_list 之内了
+  // 所以不需要需要将远程连入的 st_netfd_t 保存在自己的 fd_list
+  /*if (fd_list[client_index] != NULL) {
     fprintf(stderr, "[%d] This client #%d has connected before, replace it.\n", my_index, client_index);
     st_netfd_close(fd_list[client_index]);
   }
-  fd_list[client_index] = client;
+  fd_list[client_index] = client;*/
 
   // 初始化用于读取流的包结构
   struct rpc_package package;
@@ -338,6 +343,7 @@ static void *handle_clientconn(void *arg) {
         // 如果刚刚处理过的包已经是完整包，则处决它
         if (package.received == package.total) {
           fprintf(stdout, "[%d] receive an rpc request with content: %s\n", my_index, package.data);
+          // TODO: 添加收到 rpc 包的业务处理
         }
       }
     }
