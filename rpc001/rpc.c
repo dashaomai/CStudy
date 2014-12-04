@@ -99,8 +99,6 @@ void start_processes(const int procnum)
  * 创建用于 rpc 通讯的 TCP/IP 内容
  */
 void create_rpc_listeners(void) {
-  fprintf(stderr, "my index: %d\tmy pid: %d\n", my_index, my_pid);
-
   int fd;
   struct addrinfo hints, *ai, *p;
 
@@ -117,21 +115,28 @@ void create_rpc_listeners(void) {
 
   sprintf(port, "%d", rpc_port);
 
+  fprintf(stdout, "[%d] want to getaddrinfo to: 0.0.0.0:%d\n", my_index, rpc_port);
+
   if ((rv = getaddrinfo("0.0.0.0", port, &hints, &ai)) != 0) {
-    err_sys_quit(1, "getaddrinfo");
+    err_sys_quit(1, "[%d] getaddrinfo: %s\n", my_index, gai_strerror(rv));
   }
 
   for (p = ai; p != NULL; p = p->ai_next) {
     fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-    if (fd < 0) continue;
+    if (fd < 0) {
+      fprintf(stderr, "[%d] socket: %s\n", my_index, strerror(errno));
+      continue;
+    }
 
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(int));
 
     if (bind(fd, p->ai_addr, p->ai_addrlen) < 0) {
       close(fd);
+      fprintf(stderr, "[%d] bind: %s\n", my_index, strerror(errno));
       continue;
     }
 
+    fprintf(stdout, "[%d] success to bind.\n", my_index);
     break;
   }
 
@@ -206,7 +211,6 @@ static void *link_to_peers(void *arg) {
 
     //snprintf(port, 16 - 1, "%d", RPC_PORT + i);
     index = RPC_PORT + i;
-    printf("%d\n", i);
     sprintf(port, "%d", index);
 
     memset(&hints, 0, sizeof(hints));
@@ -256,11 +260,21 @@ static void *link_to_peers(void *arg) {
     // 模拟：发出第一个 rpc 包
     char message[] = "hello rpc.";
     rpcpkg_len len = strlen(message);
+    rpcpkg_len nlen = HTON(len); // network order of len
 
     char *package = (char*)calloc(sizeof(rpcpkg_len) + len, sizeof(char));
-    sprintf(package, "%d%s", len, message);
+    memcpy(package, &nlen, sizeof(len));
+    memcpy(package + sizeof(len), message, len);
 
-    st_write(client, package, len + sizeof(rpcpkg_len), ST_UTIME_NO_TIMEOUT);
+    fprintf(stdout, "[%d] construction an package: << ", my_index, package);
+    for (int j=0; j<len + sizeof(len); j++) {
+      fprintf(stdout, "%2X ", *((uint8_t*)package + j));
+    }
+    fprintf(stdout, " >>\n");
+
+    if ((rv = st_write(client, package, len + sizeof(rpcpkg_len), ST_UTIME_NO_TIMEOUT)) == -1) {
+      fprintf(stderr, "[%d] failed to write package into client\n", my_index);
+    }
 
     free(package);
   }
