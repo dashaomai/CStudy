@@ -8,4 +8,4 @@ rpc.o : rpc.c
 
 .PHONY : clean
 clean :
-	-rm rpc *.o
+	-rm -rf rpc *.o *.core
