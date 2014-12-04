@@ -268,7 +268,7 @@ static void *link_to_peers(void *arg) {
 
     fprintf(stdout, "[%d] construction an package: << ", my_index);
     for (int j=0; j<len + sizeof(len); j++) {
-      fprintf(stdout, "%2X ", *((uint8_t*)package + j));
+      fprintf(stdout, "%02X ", *((uint8_t*)package + j));
     }
     fprintf(stdout, " >>\n");
 
@@ -344,6 +344,9 @@ static void *handle_clientconn(void *arg) {
     } else if (len == 0) {
       goto close_fd_and_quit;
     } else {
+      if (len > sizeof(buf))
+        fprintf(stdout, "[%d] read %d bytes into buffer with size: %d bytes.\n", my_index, len, sizeof(buf));
+
       // 流进来数据了
       cursor = 0;
       while (cursor < len) { // 如果缓冲区内数据没有处理完
@@ -367,7 +370,7 @@ static void *handle_clientconn(void *arg) {
 
           receive = (len >= package.total - package.received) ? package.total - package.received : len;
 
-          memcpy(&package.data + package.received, buf + cursor + pkghead_len, receive);
+          memcpy(&package.data + package.received, buf + cursor, receive);
 
           package.received += receive;
           cursor += receive;
