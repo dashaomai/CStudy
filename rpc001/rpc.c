@@ -266,7 +266,7 @@ static void *link_to_peers(void *arg) {
     memcpy(package, &nlen, sizeof(len));
     memcpy(package + sizeof(len), message, len);
 
-    fprintf(stdout, "[%d] construction an package: << ", my_index, package);
+    fprintf(stdout, "[%d] construction an package: << ", my_index);
     for (int j=0; j<len + sizeof(len); j++) {
       fprintf(stdout, "%2X ", *((uint8_t*)package + j));
     }
