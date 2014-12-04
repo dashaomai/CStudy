@@ -34,6 +34,10 @@ void err_sys_quit(const int fd, const char *fmt, ...);
 static void err_doit(int fd, int errnoflag, const char *fmt, va_list ap);
 char *err_tstamp(void);
 
+#define rpcpkg_len uint16_t
+#define HTON(v) htons(v)
+#define NTOH(v) ntohs(v)
+
 /* rpc 通讯走 TCP/IP 方式 */
 #define RPC_PORT 9555
 
@@ -160,6 +164,7 @@ void create_rpc_listeners(void) {
 
 /**
  * 接收 rpc 连接
+ * 进程的主线程在这里回环
  */
 void accept_client(void) {
   st_netfd_t client;
@@ -192,12 +197,17 @@ static void *link_to_peers(void *arg) {
   st_netfd_t client;
   struct addrinfo hints, *ai, *p;
   const char *host = "0.0.0.0";
-  char port[16];
+
+  fprintf(stderr, "link to perrs\n");
 
   for (int i=0; i<vp_count; i++) {
     if (i == my_index) continue;
+    char port[16];
 
-    snprintf(port, 16, "%d", RPC_PORT + i);
+    //snprintf(port, 16 - 1, "%d", RPC_PORT + i);
+    index = RPC_PORT + i;
+    printf("%d\n", i);
+    sprintf(port, "%d", index);
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = PF_UNSPEC;
@@ -240,15 +250,24 @@ static void *link_to_peers(void *arg) {
     }
 
     freeaddrinfo(ai);
+    ai = NULL;
+    p = NULL;
+
+    // 模拟：发出第一个 rpc 包
+    char message[] = "hello rpc.";
+    rpcpkg_len len = strlen(message);
+
+    char *package = (char*)calloc(sizeof(rpcpkg_len) + len, sizeof(char));
+    sprintf(package, "%d%s", len, message);
+
+    st_write(client, package, len + sizeof(rpcpkg_len), ST_UTIME_NO_TIMEOUT);
+
+    free(package);
   }
 
   return NULL;
 
 }
-
-#define rpcpkg_len uint16_t
-#define HTON(v) htons(v)
-#define NTOH(v) ntohs(v)
 
 struct rpc_package {
   rpcpkg_len  total;
