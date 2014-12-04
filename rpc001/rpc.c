@@ -154,9 +154,13 @@ void create_rpc_listeners(void) {
   }
 
   // 初始化 st 线程
+  if (st_set_eventsys(ST_EVENTSYS_ALT) == -1)
+    fprintf(stderr, "[%d] Can't set event system to alt: %s\n", my_index, strerror(errno));
   if (st_init() < 0) {
     err_sys_quit(1, "[%d] failed to init st\n", my_index);
   }
+
+  fprintf(stdout, "[%d] the event system is: %s\n", my_index, st_get_eventsys_name());
 
   // 转换 fd
   if ((rpc_fd = st_netfd_open(fd)) == NULL)
