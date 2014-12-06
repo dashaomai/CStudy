@@ -71,6 +71,8 @@ int main(int argc, const char *argv[])
   }
 
   // 初始化多线程
+  st_set_eventsys(ST_EVENTSYS_ALT);
+
   if (st_init() < 0) {
     fprintf(stderr, "ERROR: initialize of st failed.\n");
     return 4;
