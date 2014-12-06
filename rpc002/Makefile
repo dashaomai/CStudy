@@ -4,7 +4,7 @@ all : rpc_log.o rpc_queue.o rpc_peer.o rpc_main.o
 	cc -L $(ST_ROOT) -lst -o rpc rpc_log.o rpc_queue.o rpc_peer.o rpc_main.o
 
 rpc_log.o : rpc_log.h rpc_log.c
-	cc -DDEBUG -g -c -I $(ST_ROOT) rpc_log.c
+	cc -g -c -I $(ST_ROOT) rpc_log.c
 
 rpc_queue.o : rpc_queue.h rpc_queue.c
 	cc -g -c -I $(ST_ROOT) rpc_queue.c

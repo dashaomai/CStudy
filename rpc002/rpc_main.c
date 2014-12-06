@@ -9,7 +9,7 @@
 
 int main(int argc, const char *argv[])
 {
-  console_log("%s\n", "hello rpc!");
+  LOG("%s\n", "hello rpc!");
 
   return 0;
 }
