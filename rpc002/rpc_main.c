@@ -5,8 +5,11 @@
  */
 #include <stdio.h>
 
+#include "rpc_log.h"
+
 int main(int argc, const char *argv[])
 {
+  console_log("%s\n", "hello rpc!");
 
   return 0;
 }
