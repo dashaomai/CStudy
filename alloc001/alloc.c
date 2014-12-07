@@ -15,5 +15,9 @@ int main(int argc, char **argv) {
 	fprintf(stdout, "The size of struct is: %d bytes.\n", sizeof(struct peer_info));
 	fprintf(stdout, "The size of instance is: %d bytes.\n", sizeof(list[1]));
 
+	fprintf(stdout, "The address of instance(s) is: 0x%x\t0x%x\t0x%x.\n", &list[0], &list[1], &list[2]);
+
+	free(list);
+
 	return 0;
 }
