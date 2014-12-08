@@ -28,6 +28,19 @@ struct peer_info {
 
 struct peer_info *peer_list;
 
+// 下面是 RPC 通讯包的相关定义
+#define rpcpkg_len uint16_t
+#define HTON(v) htons(v)
+#define NTOH(v) ntohs(v)
+
+struct rpc_package {
+  rpcpkg_len  total;
+  rpcpkg_len  received;
+  uint8_t     data[0xFFFF];  // 64k buffer
+};
+
+static struct rpc_package *package;
+
 /**
  * 向指定的 peer_info 结构体内赋值并准备建立 rpc 通讯
  * @arg   {struct peer_info*}         要被写入的结构体
