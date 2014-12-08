@@ -250,15 +250,14 @@ void _peer_accept(void) {
   peer_info = &peer_list[self_index];
 
   // 每个 Peer 的主回环
-  for (;;)
-    if ((client = st_accept(peer_info->rpc_fd, &from, &fromlen, ST_UTIME_NO_TIMEOUT)) != NULL) {
-      LOG("[%d] 收到一个 RPC 互联请求\n", self_index);
+  while ((client = st_accept(peer_info->rpc_fd, &from, &fromlen, ST_UTIME_NO_TIMEOUT)) != NULL) {
+    LOG("[%d] 收到一个 RPC 互联请求\n", self_index);
 
-      st_netfd_setspecific(client, get_in_addr(&from), NULL);
+    st_netfd_setspecific(client, get_in_addr(&from), NULL);
 
-      if (st_thread_create(_handle_peer_interconnect, &client, 0, 0) == NULL)
-        ERR("[%d] failed to create the client thread: %s\n", self_index, strerror(errno));
-    }
+    if (st_thread_create(_handle_peer_interconnect, &client, 0, 0) == NULL)
+      ERR("[%d] failed to create the client thread: %s\n", self_index, strerror(errno));
+  }
 
   LOG("[%d] 完成了当前 Peer 的主循环\n", self_index);
 
