@@ -15,12 +15,15 @@ int main(int argc, const char *argv[])
 {
   start_processes();
 
+  peer_listen_and_interconnect();
+
   return 0;
 }
 
 void start_processes(void) {
   // TODO: 目前是手写的配置，将来需要改为外部配置
   const char *services[] = { "master", "connector", "chat", "login" };
+  const char *hosts[] = { "0.0.0.0", "0.0.0.0", "0.0.0.0", "0.0.0.0" };
   const int portes[] = { 9555, 9556, 9557, 9558 };
   int i;
   pid_t pid;
@@ -53,7 +56,6 @@ void start_processes(void) {
   peer_list = (struct peer_info *)calloc(peer_count, sizeof(struct peer_info));
 
   for (i = 0; i < peer_count; i++) {
-    if (peer_create(peer_list + i, i, services[i], portes[i]) != 0)
-      exit(1);
+    peer_create(peer_list + i, i, services[i], hosts[i], portes[i]);
   }
 }

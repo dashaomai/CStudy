@@ -9,34 +9,52 @@
 #include "rpc_peer.h"
 #include "rpc_log.h"
 
-int peer_create(struct peer_info *dest, const peer_index_t index, const char *name, const int port) {
+int _peer_listen(const peer_index_t index);
+int _peer_connect(const peer_index_t index);
+
+void peer_create(struct peer_info *dest, const peer_index_t index, const char *name, const char *host, const int port) {
   dest->index = index;
   memcpy(dest->name, name, strlen(name));
+  memcpy(dest->host, host, strlen(host));
+  snprintf(dest->port, LONGEST_PORT, "%d", port);
+}
 
-  extern peer_index_t self_index;
+int peer_listen_and_interconnect(void) {
+  int i, result, rv;
 
-  if (index != self_index)
-    return 0;
+  if ((result = _peer_listen(self_index)) != 0)
+    return result;
 
+  // TODO: 通过延时来等待其它结点完成侦听。将来要改
+  sleep(1);
+
+  for (i = 0; i < peer_count; i++) {
+    if (i != self_index)
+      if ((rv = _peer_connect(i)) != 0)
+        result = rv;
+  }
+
+  return result;
+}
+
+int _peer_listen(const peer_index_t index) {
   // 现在开始创建 rpc_fd
   int listen_fd;
   struct addrinfo hints, *ai, *p;
   int reuseaddr = 1;
   int rv;
-  char rpc_port[16];
-
-  extern peer_index_t peer_count;
-
-  snprintf(rpc_port, sizeof(rpc_port), "%d", port);
+  struct peer_info *peer_info;
 
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = PF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags = AI_PASSIVE;
 
-  LOG("[%d] 准备从以下地址获取 IP 信息：0.0.0.0:%d\n", self_index, port);
+  peer_info = &peer_list[index];
 
-  if ((rv = getaddrinfo("0.0.0.0", rpc_port, &hints, &ai)) != 0) {
+  LOG("[%d] 准备从以下地址获取 IP 信息：%s:%s\n", self_index, peer_info->host, peer_info->port);
+
+  if ((rv = getaddrinfo(peer_info->host, peer_info->port, &hints, &ai)) != 0) {
     ERR("[%d] getaddrinfo 时出现错误：%s\n", self_index, strerror(errno));
     return -1;
   }
@@ -60,7 +78,7 @@ int peer_create(struct peer_info *dest, const peer_index_t index, const char *na
   }
 
   if (p == NULL) {
-    ERR("[%d] failed to bind at 0.0.0.0\n", self_index);
+    ERR("[%d] failed to bind at %s.\n", self_index, peer_info->host);
     return -1;
   }
 
@@ -69,7 +87,7 @@ int peer_create(struct peer_info *dest, const peer_index_t index, const char *na
   p = NULL;
 
   if (listen(listen_fd, 10) == -1) {
-    ERR("[%d] failed to listen in %d\n", self_index, port);
+    ERR("[%d] failed to listen in %d\n", self_index, peer_info->port);
     return -1;
   }
 
@@ -90,7 +108,11 @@ int peer_create(struct peer_info *dest, const peer_index_t index, const char *na
     return -1;
   }
 
-  LOG("[%d] count of services is %d.\n", self_index, peer_count);
+  return 0;
+}
+
+int _peer_connect(const peer_index_t index) {
+  int i;
 
   return 0;
 }
