@@ -13,7 +13,7 @@ rpc_peer.o : rpc_peer.h rpc_peer.c
 	cc -g -c -I $(ST_ROOT) rpc_peer.c
 
 rpc_main.o : rpc_main.c
-	cc -DDEBUG -g -c -I $(ST_ROOT) rpc_main.c
+	cc -g -c -I $(ST_ROOT) rpc_main.c
 
 .PHONY : clean
 clean :

@@ -1,20 +1,23 @@
-#include <stdio.h>
+/**
+ * 服务结点。
+ * 一个结点是一个独立的进程，它和其它所有结点建立两条单向的 TCP/IP 连接，
+ * 并读取来自其它结点的 RPC 请求数据包，将其放入自己的任务队列当中。
+ */
+
 #include <st.h>
 
-#include "rpc_log.h"
-
 #define peer_index_t uint8_t
-#define MAX_INDEX sizeof(peer_index_t)
+#define MAX_INDEX_OF_PEER sizeof(peer_index_t)
 
 // 结点名字最大长度
-#define MAX_NAME  32;
+#define LONGEST_NAME_OF_PEER  32
 
 peer_index_t    peer_count;
 peer_index_t    self_index;
 
 struct peer_info {
-  const peer_index_t  index;
-  const char    name[MAX_NAME];
+  peer_index_t  index;
+  char          name[LONGEST_NAME_OF_PEER];
   st_netfd_t    rpc_fd;
 };
 
@@ -26,5 +29,6 @@ struct peer_info *peer_list;
  * @arg   {const peer_index_t}        该结点的 index
  * @arg   {const char*}               该结点的名称
  * @arg   {const int}                 该结点的 RPC 侦听端口
+ * @return  {int}                     是否创建成功的标识。0 为成功创建，-1 为失败
  */
-void peer_create(struct peer_info *dest, const peer_index_t index, const char *name, const int port);
+int peer_create(struct peer_info *dest, const peer_index_t index, const char *name, const int port);

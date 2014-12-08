@@ -13,6 +13,6 @@ const char *_get_timestamp(void);
   #define LOG console_log
   #define ERR console_err
 #else
-  #define LOG void
-  #define ERR void
+  #define LOG console_log
+  #define ERR console_err
 #endif
