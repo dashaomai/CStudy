@@ -60,7 +60,7 @@ static void *_interconnect_to_peers(void *arg) {
   return 0;
 }
 
-static void *handle_clientconn(void *arg) {
+static void *_handle_peer_interconnect(void *arg) {
   st_netfd_t client = *(st_netfd_t*)arg;
   arg = NULL;
 
@@ -245,7 +245,7 @@ void _peer_accept() {
   while ((client = st_accept(peer_info->rpc_fd, &from, &fromlen, ST_UTIME_NO_TIMEOUT)) != NULL) {
     st_netfd_setspecific(client, get_in_addr(&from), NULL);
 
-    if (st_thread_create(handle_clientconn, &client, 0, 0) == NULL)
+    if (st_thread_create(_handle_peer_interconnect, &client, 0, 0) == NULL)
       fprintf(stderr, "[%d] failed to create the client thread: %s\n", self_index, strerror(errno));
   }
 
