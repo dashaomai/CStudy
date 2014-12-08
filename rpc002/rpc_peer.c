@@ -27,11 +27,11 @@ void peer_create(struct peer_info *dest, const peer_index_t index, const char *n
 }
 
 int peer_listen_and_interconnect(void) {
-  int i, result, rv;
+  int i, rv;
 
   // 先创建自己的侦听
-  if ((result = _peer_listen(self_index)) != 0)
-    return result;
+  if (_peer_listen(self_index) != 0)
+    return -1;
 
   // 用线程进行到其它结点的互联
   if (st_thread_create(_interconnect_to_peers, NULL, 0, 0) == NULL) {
@@ -42,7 +42,7 @@ int peer_listen_and_interconnect(void) {
   // 主线程回环，用于接收远程 rpc 结点发来的数据事件
   _peer_accept();
 
-  return result;
+  return 0;
 }
 
 static void *_interconnect_to_peers(void *arg) {
@@ -51,16 +51,24 @@ static void *_interconnect_to_peers(void *arg) {
 
   int i;
 
+  LOG("[%d] 准备向 %d 个 Peer 建立互联\n", self_index, peer_count);
+
   for (i = 0; i < peer_count; i++) {
     if (i != self_index)
       if (_peer_connect(i) != 0)
-        ERR("[%d] filed to connect to peer #%d: %s\n", self_index, i, strerror(errno));
+        ERR("[%d] failed to connect to peer #%d: %s\n", self_index, i, strerror(errno));
   }
+
+  LOG("[%d] 互联线程运行完毕\n", self_index);
 
   return 0;
 }
 
 static void *_handle_peer_interconnect(void *arg) {
+  assert(arg != NULL);
+
+  LOG("[%d] 收到 rpc 客户端连接\n", self_index);
+
   st_netfd_t client = *(st_netfd_t*)arg;
   arg = NULL;
 
@@ -72,7 +80,7 @@ static void *_handle_peer_interconnect(void *arg) {
 
   // 先只读取 1 字节的客户端握手头，表示客户端自己的 index
   if ((len = st_read(client, buf, 1, ST_UTIME_NO_TIMEOUT)) < 0) {
-    fprintf(stderr, "[%d] failed to handshake from client #%d: %s\n", self_index, *buf, strerror(errno));
+    ERR("[%d] failed to handshake from client #%d: %s\n", self_index, *buf, strerror(errno));
     goto close_fd_and_quit;
   } else if (len == 0) {
     goto close_fd_and_quit;
@@ -80,11 +88,11 @@ static void *_handle_peer_interconnect(void *arg) {
 
   uint8_t   client_index = (uint8_t)buf[0];
 
-  fprintf(stdout, "[%d] 来自 rpc 客户端 #%d 的握手已经成功建立\n", self_index, client_index);
+  LOG("[%d] 来自 rpc 客户端 #%d 的握手已经成功建立\n", self_index, client_index);
 
   // 如果 client_index 等于自己的 self_index，则这个有问题
   if (client_index == self_index) {
-    fprintf(stderr, "[%d] rpc client promet the same index with mine.\n", self_index);
+    ERR("[%d] rpc client promet the same index with mine.\n", self_index);
     goto close_fd_and_quit;
   }
 
@@ -92,7 +100,7 @@ static void *_handle_peer_interconnect(void *arg) {
   // 在前面的 make link to peers 当中，已经把写去远程结点的 st_netfd_t 保存于 fd_list 之内了
   // 所以不需要需要将远程连入的 st_netfd_t 保存在自己的 fd_list
   /*if (fd_list[client_index] != NULL) {
-    fprintf(stderr, "[%d] This client #%d has connected before, replace it.\n", self_index, client_index);
+    ERR("[%d] This client #%d has connected before, replace it.\n", self_index, client_index);
     st_netfd_close(fd_list[client_index]);
   }
   fd_list[client_index] = client;*/
@@ -108,13 +116,13 @@ static void *_handle_peer_interconnect(void *arg) {
   // 循环服务处理
   for (;;) {
     if ((len = st_read(client, buf, sizeof(buf), ST_UTIME_NO_TIMEOUT)) < 0) {
-      fprintf(stderr, "[%d] failed when read from client #%d.\n", self_index, client_index);
+      ERR("[%d] failed when read from client #%d.\n", self_index, client_index);
       goto close_fd_and_quit;
     } else if (len == 0) {
       goto close_fd_and_quit;
     } else {
       if (len > sizeof(buf))
-        fprintf(stdout, "[%d] read %ld bytes into buffer with size: %lu bytes.\n", self_index, len, sizeof(buf));
+        LOG("[%d] read %ld bytes into buffer with size: %lu bytes.\n", self_index, len, sizeof(buf));
 
       // 流进来数据了
       cursor = 0;
@@ -147,7 +155,7 @@ static void *_handle_peer_interconnect(void *arg) {
 
         // 如果刚刚处理过的包已经是完整包，则处决它
         if (package.received == package.total) {
-          fprintf(stdout, "[%d] receive an rpc request with content: %s\n", self_index, package.data);
+          LOG("[%d] receive an rpc request with content: %s\n", self_index, package.data);
           // TODO: 添加收到 rpc 包的业务处理
         }
       }
@@ -233,7 +241,7 @@ int _peer_listen(const peer_index_t index) {
   return 0;
 }
 
-void _peer_accept() {
+void _peer_accept(void) {
   st_netfd_t client;
   struct sockaddr from;
   int fromlen = sizeof(from);
@@ -242,12 +250,17 @@ void _peer_accept() {
   peer_info = &peer_list[self_index];
 
   // 每个 Peer 的主回环
-  while ((client = st_accept(peer_info->rpc_fd, &from, &fromlen, ST_UTIME_NO_TIMEOUT)) != NULL) {
-    st_netfd_setspecific(client, get_in_addr(&from), NULL);
+  for (;;)
+    if ((client = st_accept(peer_info->rpc_fd, &from, &fromlen, ST_UTIME_NO_TIMEOUT)) != NULL) {
+      LOG("[%d] 收到一个 RPC 互联请求\n", self_index);
 
-    if (st_thread_create(_handle_peer_interconnect, &client, 0, 0) == NULL)
-      fprintf(stderr, "[%d] failed to create the client thread: %s\n", self_index, strerror(errno));
-  }
+      st_netfd_setspecific(client, get_in_addr(&from), NULL);
+
+      if (st_thread_create(_handle_peer_interconnect, &client, 0, 0) == NULL)
+        ERR("[%d] failed to create the client thread: %s\n", self_index, strerror(errno));
+    }
+
+  LOG("[%d] 完成了当前 Peer 的主循环\n", self_index);
 
   st_netfd_close(peer_info->rpc_fd);
 }
@@ -265,8 +278,10 @@ int _peer_connect(const peer_index_t index) {
 
   peer_info = &peer_list[index];
 
+  LOG("[%d] 向 Peer #%d %s:%s 建立互联\n", self_index, index, peer_info->host, peer_info->port);
+
   if ((rv = getaddrinfo(peer_info->host, peer_info->port, &hints, &ai)) != 0) {
-    fprintf(stderr, "[%d] failed to getaddrinfo to peer #%d\n", self_index, index);
+    ERR("[%d] failed to getaddrinfo to peer #%d\n", self_index, index);
     return -1;
   }
 
@@ -288,7 +303,7 @@ int _peer_connect(const peer_index_t index) {
 
     // 写入 1 字节的 rpc 握手头
     if ((rv = st_write(peer_info->rpc_fd, (char *)&self_index, 1, ST_UTIME_NO_TIMEOUT)) == -1) {
-      fprintf(stderr, "[%d] handshake failed.\n", self_index);
+      ERR("[%d] handshake failed.\n", self_index);
       result = -1;
     }
 
@@ -296,7 +311,7 @@ int _peer_connect(const peer_index_t index) {
   }
 
   if (p == NULL) {
-    fprintf(stderr, "[%d] failed to connect to peer #%d.\n", self_index, index);
+    ERR("[%d] failed to connect to peer #%d.\n", self_index, index);
     result = -1;
   }
 

@@ -4,6 +4,7 @@
  * 并读取来自其它结点的 RPC 请求数据包，将其放入自己的任务队列当中。
  */
 
+#include <stdint.h>
 #include <st.h>
 
 #define peer_index_t uint8_t
