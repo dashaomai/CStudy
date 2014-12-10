@@ -13,6 +13,7 @@
 #include <st.h>
 
 void *handle_accept(void *arg);
+void *handle_connect(void *arg);
 
 int main(int argc, const char *argv[])
 {
@@ -47,14 +48,17 @@ int main(int argc, const char *argv[])
   if (p == NULL) return 1;
 
   st_netfd_t  listener, client;
-  listener = st_netfd_open(listener_fd);
+  listener = st_netfd_open_socket(listener_fd);
 
   st_thread_create(handle_accept, &listener, 0, 0);
 
+  st_sleep(1);
+
   client_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-  client= st_netfd_open(client_fd);
+  client= st_netfd_open_socket(client_fd);
 
   if (st_connect(client, p->ai_addr, p->ai_addrlen, ST_UTIME_NO_TIMEOUT) != 0) {
+    fprintf(stderr, "st_connect: %s\n", strerror(errno));
     st_netfd_close(client);
     close(client_fd);
 
@@ -68,6 +72,7 @@ int main(int argc, const char *argv[])
   char message[] = "hello st!";
   size_t len = sizeof(message);
 
+  fprintf(stdout, "Write \"%s\"into socket\n", message);
   st_write(client, message, len, ST_UTIME_NO_TIMEOUT);
 
   for (; st_sleep(1) == 0;) ;
@@ -78,19 +83,43 @@ int main(int argc, const char *argv[])
 }
 
 void *handle_accept(void *arg) {
+  fprintf(stdout, "handle_accept\n");
+
   st_netfd_t listener = *(st_netfd_t*)arg;
   st_netfd_t client;
 
-  struct sockaddr from;
-  size_t len = sizeof(from);
+  struct  sockaddr from;
+  int     len = sizeof(from);
 
-  char buff[1024];
-  size_t bufflen = sizeof(buff);
+  memset(&from, 0, len);
 
-  while ((client = st_accept(listener, &from, &len, ST_UTIME_NO_TIMEOUT)) != NULL) {
-    st_read(client, buff, bufflen, ST_UTIME_NO_TIMEOUT);
+  client = st_accept(listener, &from, &len, ST_UTIME_NO_TIMEOUT);
 
-    fprintf(stdout, "%s\n", buff);
+  // while ((client = st_accept(listener, &from, &len, ST_UTIME_NO_TIMEOUT)) != NULL) {
+  while (client != NULL) {
+    st_thread_create(handle_connect, &client, 0, 0);
+
+    client = st_accept(listener, &from, &len, ST_UTIME_NO_TIMEOUT);
   }
-  return NULL;
+  fprintf(stderr, "st_accept: %s\n", strerror(errno));
+
+  return 0;
+}
+
+void *handle_connect(void *arg) {
+  fprintf(stdout, "handle_connect\n");
+
+  st_netfd_t client = *(st_netfd_t*)arg;
+  arg = NULL;
+
+  char  buff[1024];
+  int   bufflen = sizeof(buff) / sizeof(buff[0]);
+
+  st_read(client, buff, bufflen, ST_UTIME_NO_TIMEOUT);
+
+  fprintf(stdout, "%s\n", buff);
+
+  st_netfd_close(client);
+
+  return 0;
 }

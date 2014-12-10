@@ -24,6 +24,10 @@ lua001：Lua 虚拟机最简单内嵌示例
 
 st001：基于 state-threads 的简单 Http Server 示例
 
+st002：基于 state-threads 的第二个自侦自联的示例
+
+st003：基于 state-threads 的第三个跨文件自侦听示例
+
 IOCP001/IOCP001：基于 IOCP 的最简单 TCP 示例，只会接收客户端消息并打印在控制台当中。这个示例是从教程里抄下来的。
 
 IOCP001/IOCP002：在前示例的基础上做了调整，修改了数据结构，并完成了 echo 回显的功能。
