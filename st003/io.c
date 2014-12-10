@@ -10,6 +10,8 @@
 
 #include "io.h"
 
+void *handle_conn(void *arg);
+
 void create_listener_and_accept(void) {
   st_set_eventsys(ST_EVENTSYS_ALT);
   st_init();
@@ -40,13 +42,16 @@ void create_listener_and_accept(void) {
 
   listen(listener_fd, 10);
 
-  st_netfd_t listener, client;
-  listener = st_netfd_open_socket(listener_fd);
+  context = (struct peer_context*)calloc(5, sizeof(struct peer_context));
+
+  context[0].rpc_fd = st_netfd_open_socket(listener_fd);
+
+  st_netfd_t client;
 
   struct sockaddr from;
   int len = sizeof(from);
 
-  while ((client = st_accept(listener, &from, &len, ST_UTIME_NO_TIMEOUT)) != NULL) {
+  while ((client = st_accept(context[0].rpc_fd, &from, &len, ST_UTIME_NO_TIMEOUT)) != NULL) {
     st_thread_create(handle_conn, &client, 0, 0);
   }
 }
@@ -65,7 +70,7 @@ void *handle_conn(void *arg) {
 
   fprintf(stdout, "%s\n", buff);
 
-  received = st_write(client, buff, len, ST_UTIME_NO_TIMEOUT);
+  received = st_write(client, buff, received, ST_UTIME_NO_TIMEOUT);
 
   st_netfd_close(client);
 
