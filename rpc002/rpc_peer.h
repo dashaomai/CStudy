@@ -34,13 +34,26 @@ struct peer_info *peer_list;
 #define HTON(v) htons(v)
 #define NTOH(v) ntohs(v)
 
+/**
+ * 一个 RPC 包的数据结构
+ *
+ * 由于 data 属性设定为 64k
+ * 如果在堆栈中声明该数据结构，
+ * 则在 Linux 下会产生段错误。
+ * （测试时在 FreeBSD 和 MacOSX 上没出现这种错误，
+ * 应该是默认堆栈空间较大所致）
+ *
+ * 同时这种堆栈崩溃也会影响 gdb，
+ * 让它无法准确定位到出错的行数。
+ *
+ * 所以运用这个数据结构时，一定要用 malloc 来从堆中分配内存
+ * 不能在栈里直接分配
+ */
 struct rpc_package {
   rpcpkg_len  total;
   rpcpkg_len  received;
   uint8_t     data[0xFFFF];  // 64k buffer
 };
-
-static struct rpc_package *package;
 
 /**
  * 向指定的 peer_info 结构体内赋值并准备建立 rpc 通讯

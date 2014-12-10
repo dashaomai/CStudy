@@ -12,8 +12,8 @@
 
 #include "../beej/common.h"
 
-static void *_interconnect_to_peers(void *arg);
-static void *_handle_peer_interconnect(void *arg);
+void *_interconnect_to_peers(void *arg);
+void *_handle_peer_interconnect(void *arg);
 
 int _peer_listen(const peer_index_t index);
 void _peer_accept(void);
@@ -27,8 +27,6 @@ void peer_create(struct peer_info *dest, const peer_index_t index, const char *n
 }
 
 int peer_listen_and_interconnect(void) {
-  int i, rv;
-
   // 先创建自己的侦听
   if (_peer_listen(self_index) != 0)
     return -1;
@@ -45,7 +43,7 @@ int peer_listen_and_interconnect(void) {
   return 0;
 }
 
-static void *_interconnect_to_peers(void *arg) {
+void *_interconnect_to_peers(void *arg) {
   // TODO: 通过延时来等待其它结点完成侦听。将来要改
   st_sleep(1);
 
@@ -64,12 +62,12 @@ static void *_interconnect_to_peers(void *arg) {
   return 0;
 }
 
-static void *_handle_peer_interconnect(void *arg) {
+void *_handle_peer_interconnect(void *arg) {
   assert(arg != NULL);
 
   LOG("[%d] 收到 rpc 客户端连接\n", self_index);
 
-  st_netfd_t client = *(st_netfd_t*)arg;
+  st_netfd_t client = (st_netfd_t)arg;
   arg = NULL;
 
   // 握手
@@ -106,8 +104,9 @@ static void *_handle_peer_interconnect(void *arg) {
   fd_list[client_index] = client;*/
 
   // 初始化用于读取流的包结构
-  struct rpc_package package;
-  memset((void*)&package, 0, sizeof(package));
+  struct rpc_package *package;
+  package = (struct rpc_package*)calloc(1, sizeof(struct rpc_package));
+  //
 
   const size_t pkghead_len = sizeof(rpcpkg_len);
   size_t      receive;
@@ -129,33 +128,33 @@ static void *_handle_peer_interconnect(void *arg) {
       while (cursor < len) { // 如果缓冲区内数据没有处理完
 
         // 如果之前没切过包，或者前一包已经完成
-        if (package.total == package.received) {
-          package.total = NTOH(*(rpcpkg_len *)(buf + cursor));
+        if (package->total == package->received) {
+          package->total = NTOH(*(rpcpkg_len *)(buf + cursor));
 
-          if (len - cursor - pkghead_len >= package.total) {
-            package.received = package.total;
+          if (len - cursor - pkghead_len >= package->total) {
+            package->received = package->total;
           } else {
-            package.received = len - cursor - pkghead_len;
+            package->received = len - cursor - pkghead_len;
           }
 
-          memcpy(&package.data, buf + cursor + pkghead_len, package.received);
+          memcpy(&package->data, buf + cursor + pkghead_len, package->received);
 
-          cursor += package.received + pkghead_len;
+          cursor += package->received + pkghead_len;
         } else {
           // 现在处理的是断开包
-          assert(package.received < package.total);
+          assert(package->received < package->total);
 
-          receive = (len >= package.total - package.received) ? package.total - package.received : len;
+          receive = (len >= package->total - package->received) ? package->total - package->received : len;
 
-          memcpy(&package.data + package.received, buf + cursor, receive);
+          memcpy(&package->data + package->received, buf + cursor, receive);
 
-          package.received += receive;
+          package->received += receive;
           cursor += receive;
         }
 
         // 如果刚刚处理过的包已经是完整包，则处决它
-        if (package.received == package.total) {
-          LOG("[%d] receive an rpc request with content: %s\n", self_index, package.data);
+        if (package->received == package->total) {
+          LOG("[%d] receive an rpc request with content: %s\n", self_index, package->data);
           // TODO: 添加收到 rpc 包的业务处理
         }
       }
@@ -163,6 +162,7 @@ static void *_handle_peer_interconnect(void *arg) {
   }
 
 close_fd_and_quit:
+  free(package);
   st_netfd_close(client);
   return 0;
 }
@@ -233,7 +233,7 @@ int _peer_listen(const peer_index_t index) {
   LOG("[%d] The event system of state-threads is: %s\n", self_index, st_get_eventsys_name());
 
   // 转换 fd
-  if ((peer_list[self_index].rpc_fd = st_netfd_open(listen_fd)) == NULL) {
+  if ((peer_list[self_index].rpc_fd = st_netfd_open_socket(listen_fd)) == NULL) {
     ERR("[%d] st_netfd_open: %s\n", self_index, strerror(errno));
     return -1;
   }
@@ -255,17 +255,17 @@ void _peer_accept(void) {
 
     st_netfd_setspecific(client, get_in_addr(&from), NULL);
 
-    if (st_thread_create(_handle_peer_interconnect, &client, 0, 0) == NULL)
+    if (st_thread_create(_handle_peer_interconnect, client, 0, 0) == NULL)
       ERR("[%d] failed to create the client thread: %s\n", self_index, strerror(errno));
   }
 
-  LOG("[%d] 完成了当前 Peer 的主循环\n", self_index);
+  LOG("[%d] 完成了当前 Peer 的主循环: %s\n", self_index, strerror(errno));
 
   st_netfd_close(peer_info->rpc_fd);
 }
 
 int _peer_connect(const peer_index_t index) {
-  int client_fd, i, rv, result;
+  int client_fd, rv, result;
   struct addrinfo hints, *ai, *p;
   struct peer_info *peer_info;
 
@@ -289,14 +289,13 @@ int _peer_connect(const peer_index_t index) {
       continue;
     }
 
-    if ((peer_info->rpc_fd = st_netfd_open(client_fd)) == NULL) {
+    if ((peer_info->rpc_fd = st_netfd_open_socket(client_fd)) == NULL) {
       close(client_fd);
       continue;
     }
 
     if ((rv = st_connect(peer_info->rpc_fd, p->ai_addr, p->ai_addrlen, ST_UTIME_NO_TIMEOUT)) != 0) {
       st_netfd_close(peer_info->rpc_fd);
-      close(client_fd);
       continue;
     }
 
