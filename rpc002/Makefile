@@ -3,7 +3,7 @@ COMPILE=-g -c -I $(ST_ROOT) -Wall
 LINKAGE=-L $(ST_ROOT) -lst
 
 all : rpc_log.o rpc_queue.o rpc_peer.o rpc_main.o
-	cc $(LINKAGE) -o rpc *.o
+	cc -o rpc *.o $(ST_ROOT)libst.a
 
 rpc_log.o : rpc_log.h rpc_log.c
 	cc $(COMPILE) rpc_log.c
