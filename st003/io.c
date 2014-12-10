@@ -52,13 +52,13 @@ void create_listener_and_accept(void) {
   int len = sizeof(from);
 
   while ((client = st_accept(context[0].rpc_fd, &from, &len, ST_UTIME_NO_TIMEOUT)) != NULL) {
-    st_thread_create(handle_conn, &client, 0, 0);
+    st_thread_create(handle_conn, client, 0, 0);
   }
 }
 
 void *handle_conn(void *arg) {
   st_netfd_t client;
-  client = *(st_netfd_t*)arg;
+  client = (st_netfd_t)arg;
   arg = NULL;
 
   char buff[1024];
