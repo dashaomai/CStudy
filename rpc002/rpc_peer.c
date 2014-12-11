@@ -323,3 +323,11 @@ int _peer_connect(const peer_index_t index) {
 
   return result;
 }
+
+int peer_request(const char *peer_name, const char *method, const char *parameter) {
+  static uint8_t id_seed = 0;
+
+  LOG("[%d] 准备发出一次 RPC 请求，目标结点：%s，方法：%s，参数：%s\n", self_index, peer_name, method, parameter);
+
+  int dest_index;
+}

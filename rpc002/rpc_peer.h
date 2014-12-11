@@ -44,3 +44,8 @@ void peer_create(struct peer_info *dest, const peer_index_t index, const char *n
  * @return  {int}                     是否创建成功的标识。0 为成功创建，-1 为失败
  */
 int peer_listen_and_interconnect(void);
+
+/**
+ * 发出一个 rpc 请求，并返回该请求分配的 id 值
+ */
+int peer_request(const char *peer_name, const char *method, const char *parameter);
