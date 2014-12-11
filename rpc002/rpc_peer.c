@@ -137,7 +137,7 @@ void *_handle_peer_interconnect(void *arg) {
             package->received = len - cursor - pkghead_len;
           }
 
-          memcpy(&package->content.data, buf + cursor + pkghead_len, package->received);
+          memcpy(&package->data, buf + cursor + pkghead_len, package->received);
 
           cursor += package->received + pkghead_len;
         } else {
@@ -146,7 +146,7 @@ void *_handle_peer_interconnect(void *arg) {
 
           receive = (len >= package->total - package->received) ? package->total - package->received : len;
 
-          memcpy(&package->content.data + package->received, buf + cursor, receive);
+          memcpy(&package->data + package->received, buf + cursor, receive);
 
           package->received += receive;
           cursor += receive;
@@ -154,7 +154,7 @@ void *_handle_peer_interconnect(void *arg) {
 
         // 如果刚刚处理过的包已经是完整包，则处决它
         if (package->received == package->total) {
-          LOG("[%d] receive an rpc request with content: %s\n", self_index, package->content.data);
+          LOG("[%d] receive an rpc request with content: %s\n", self_index, package->data);
           // TODO: 添加收到 rpc 包的业务处理
         }
       }
@@ -321,13 +321,93 @@ int _peer_connect(const peer_index_t index) {
   ai = NULL;
   p = NULL;
 
+  // 模拟写入一个 RPC 包
+  peer_request(peer_info->name, "default.ping", "hold for 10s");
+
   return result;
 }
 
 int peer_request(const char *peer_name, const char *method, const char *parameter) {
-  static uint8_t id_seed = 0;
+  static uint8_t request_id = 0;
 
   LOG("[%d] 准备发出一次 RPC 请求，目标结点：%s，方法：%s，参数：%s\n", self_index, peer_name, method, parameter);
 
-  int dest_index;
+  peer_index_t dest_index;
+  struct peer_info *peer_info;
+  int i, len, matched;
+
+  for (dest_index = 0; dest_index < peer_count; dest_index ++) {
+    if (dest_index != self_index) {
+      peer_info = &peer_list[dest_index];
+      len = strlen(peer_info->name);
+      matched = 1;
+
+      for (i = 0; i < len; i++) {
+        if (peer_info->name[i] != peer_name[i]) {
+          matched = 0;
+          break;
+        }
+      }
+
+      if (matched == 0) continue;
+
+      // 匹配到结点对应的 dest_index，构造 RPC 业务包并准备发送
+      struct rpc_package_head *head;
+
+      head = protocol_package_create(REQUEST, self_index, dest_index, request_id++, method, parameter);
+
+      rpcpkg_len pkg_len, temp_len, cursor;
+      char *data;
+
+      pkg_len = sizeof(rpcpkg_len) + sizeof(struct rpc_package_head) - sizeof(union rpc_package_body*) + sizeof(union rpc_package_body);
+      data = (char *)malloc(pkg_len);
+
+      cursor = sizeof(rpcpkg_len);
+      memcpy(data + cursor, &head->type, sizeof(head->type));
+      cursor += sizeof(head->type);
+      memcpy(data + cursor, &head->source, sizeof(head->source));
+      cursor += sizeof(head->source);
+      memcpy(data + cursor, &head->destination, sizeof(head->destination));
+      cursor += sizeof(head->destination);
+      memcpy(data + cursor, &head->id, sizeof(head->id));
+      cursor += sizeof(head->id);
+
+      struct rpc_request *request;
+      request = &head->body->request;
+
+      memcpy(data + cursor, &request->method_len, sizeof(request->method_len));
+      cursor += sizeof(request->method_len);
+      temp_len = htons(request->parameter_len);
+      memcpy(data + cursor, &temp_len, sizeof(request->parameter_len));
+      cursor += sizeof(request->parameter_len);
+
+      memcpy(data + cursor, request->method, request->method_len);
+      cursor += request->method_len;
+      memcpy(data + cursor, request->parameter, request->parameter_len);
+      cursor += request ->parameter_len;
+
+      // 写上包长于头部
+      cursor -= sizeof(rpcpkg_len);
+      temp_len = htons(cursor);
+      memcpy(data, &temp_len, sizeof(temp_len));
+
+      // 释放结构体
+      free(head->body->request.method);
+      free(head->body->request.parameter);
+      free(head->body);
+      free(head);
+      head = NULL;
+
+      // 发送缓冲区包内容
+      if ((pkg_len = st_write(peer_info->rpc_fd, data, cursor, ST_UTIME_NO_TIMEOUT)) != cursor) {
+        ERR("[%d] 写入 RPC 包长度 %d 与原包长 %d 不符\n", self_index, pkg_len, cursor);
+      }
+
+      free(data);
+
+      return cursor;
+    }
+  }
+
+  return 0;
 }

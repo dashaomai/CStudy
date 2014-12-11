@@ -32,24 +32,51 @@
 struct rpc_package {
   rpcpkg_len  total;
   rpcpkg_len  received;
-  union       content {
-    uint8_t     data[0xFFFF];  // 64k buffer
-    struct      package {
-      uint8_t   type;
-      peer_index_t  source;
-      peer_index_t  destination;
-      uint8_t   id;
-      union     body {
-        struct  request {
-          char    method[LONGEST_METHOD];
-          char    parameter[LONGEST_PARAMETER];
-        } request;
-        struct  response {
-          char    result[LONGEST_RESULT];
-        } response;
-      } body;
-    } package;
-  } content;
+  uint8_t     data[0xFFFF];  // 64k buffer
 };
 
-const char *protocol_decode(const char *bytes, const rpcpkg_len len);
+/**
+ * Request 数据体
+ */
+struct rpc_request {
+  uint8_t   method_len;
+  uint16_t  parameter_len;
+  char      *method;
+  char      *parameter;
+};
+
+/**
+ * Response 数据体
+ */
+struct rpc_response {
+  uint16_t  result_len;
+  char      *result;
+};
+
+/**
+ * RPC 包的数据体
+ */
+union rpc_package_body {
+  struct rpc_request request;
+  struct rpc_response response;
+};
+
+
+enum rpc_package_type {
+  REQUEST,
+  RESPONSE
+};
+
+/**
+ * RPC 包的数据头
+ */
+struct rpc_package_head {
+  enum rpc_package_type type;
+  peer_index_t  source;
+  peer_index_t  destination;
+  uint8_t   id;
+  union rpc_package_body *body;
+};
+
+const struct rpc_package_head *protocol_decode(const struct rpc_package *package);
+struct rpc_package_head *protocol_package_create(enum rpc_package_type type, const peer_index_t source, const peer_index_t distination, const uint8_t id, const char *method, const char *parameter);
