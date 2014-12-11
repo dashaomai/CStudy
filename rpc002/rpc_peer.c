@@ -57,7 +57,7 @@ void *_interconnect_to_peers(void *arg) {
         ERR("[%d] failed to connect to peer #%d: %s\n", self_index, i, strerror(errno));
   }
 
-  LOG("[%d] 互联线程运行完毕\n", self_index);
+  LOG("[%d] 互联完毕\n", self_index);
 
   return 0;
 }
@@ -137,7 +137,7 @@ void *_handle_peer_interconnect(void *arg) {
             package->received = len - cursor - pkghead_len;
           }
 
-          memcpy(&package->data, buf + cursor + pkghead_len, package->received);
+          memcpy(&package->content.data, buf + cursor + pkghead_len, package->received);
 
           cursor += package->received + pkghead_len;
         } else {
@@ -146,7 +146,7 @@ void *_handle_peer_interconnect(void *arg) {
 
           receive = (len >= package->total - package->received) ? package->total - package->received : len;
 
-          memcpy(&package->data + package->received, buf + cursor, receive);
+          memcpy(&package->content.data + package->received, buf + cursor, receive);
 
           package->received += receive;
           cursor += receive;
@@ -154,7 +154,7 @@ void *_handle_peer_interconnect(void *arg) {
 
         // 如果刚刚处理过的包已经是完整包，则处决它
         if (package->received == package->total) {
-          LOG("[%d] receive an rpc request with content: %s\n", self_index, package->data);
+          LOG("[%d] receive an rpc request with content: %s\n", self_index, package->content.data);
           // TODO: 添加收到 rpc 包的业务处理
         }
       }
@@ -218,7 +218,7 @@ int _peer_listen(const peer_index_t index) {
 
   if (listen(listen_fd, 10) == -1) {
     ERR("[%d] failed to listen in %d\n", self_index, peer_info->port);
-    return -1;
+    goto close_fd_and_quit;
   }
 
   // 初始化 state-threads 系统
@@ -227,7 +227,7 @@ int _peer_listen(const peer_index_t index) {
 
   if (st_init() < 0) {
     ERR("[%d] st_init \n", self_index);
-    return -1;
+    goto close_fd_and_quit;
   }
 
   LOG("[%d] The event system of state-threads is: %s\n", self_index, st_get_eventsys_name());
@@ -235,10 +235,14 @@ int _peer_listen(const peer_index_t index) {
   // 转换 fd
   if ((peer_list[self_index].rpc_fd = st_netfd_open_socket(listen_fd)) == NULL) {
     ERR("[%d] st_netfd_open: %s\n", self_index, strerror(errno));
-    return -1;
+    goto close_fd_and_quit;
   }
 
   return 0;
+
+close_fd_and_quit:
+  close(listen_fd);
+  return -1;
 }
 
 void _peer_accept(void) {
