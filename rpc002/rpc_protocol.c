@@ -8,7 +8,7 @@
 #include "rpc_log.h"
 
 char *malloc_and_copy(const char *src, const rpcpkg_len start, const rpcpkg_len length) {
-  char *buffer = (char *)malloc(length);
+  char *buffer = (char *)malloc(length + 1);
   memcpy(buffer, src + start, length);
   buffer[length] = '\0';
 
