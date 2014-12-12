@@ -8,16 +8,21 @@
 #include <assert.h>
 
 #include "rpc_peer.h"
+#include "rpc_queue.h"
 #include "rpc_log.h"
 
 #include "../beej/common.h"
 
 void *_interconnect_to_peers(void *arg);
 void *_handle_peer_interconnect(void *arg);
+void *_queue_worker(void *arg);
 
 int _peer_listen(const peer_index_t index);
 void _peer_accept(void);
 int _peer_connect(const peer_index_t index);
+
+// RPC 任务队列，内由 struct rpc_package_head 链表构成
+static struct rpc_queue *queue;
 
 void peer_create(struct peer_info *dest, const peer_index_t index, const char *name, const char *host, const int port) {
   dest->index = index;
@@ -27,6 +32,10 @@ void peer_create(struct peer_info *dest, const peer_index_t index, const char *n
 }
 
 int peer_listen_and_interconnect(void) {
+  // 创建自己的任务队列
+  queue = queue_create();
+  st_thread_create(_queue_worker, queue, 0, 0);
+
   // 先创建自己的侦听
   if (_peer_listen(self_index) != 0)
     return -1;
@@ -159,7 +168,7 @@ void *_handle_peer_interconnect(void *arg) {
 
           LOG("[%d] receive an rpc request with method: %s and parameter: %s\n", self_index, head->body->request.method, head->body->request.parameter);
 
-          protocol_package_free(&head);
+          queue_put(head);
         }
       }
     }
@@ -170,6 +179,24 @@ close_fd_and_quit:
   st_netfd_close(client);
   return 0;
 }
+
+void *_queue_worker(void *arg) {
+  struct rpc_queue *queue;
+  queue = (struct rpc_queue*)arg;
+  arg = NULL;
+
+  for (; st_sleep(1); ) {
+    queue_schedule(queue);
+  }
+}
+
+
+
+
+
+
+
+
 
 int _peer_listen(const peer_index_t index) {
   // 现在开始创建 rpc_fd

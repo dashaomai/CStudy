@@ -77,6 +77,7 @@ struct rpc_package_head {
   peer_index_t  destination;
   uint8_t   id;
   union rpc_package_body *body;
+  struct rpc_package_head *next; // 链表支持
 };
 
 char *protocol_encode(const struct rpc_package_head *head, rpcpkg_len *cursor_result);
