@@ -15,6 +15,52 @@ char *malloc_and_copy(const char *src, const rpcpkg_len start, const rpcpkg_len 
   return buffer;
 }
 
+
+
+
+char *protocol_encode(const struct rpc_package_head *head, rpcpkg_len *cursor_result) {
+  rpcpkg_len pkg_len, temp_len, cursor;
+  char *data;
+
+  pkg_len = sizeof(rpcpkg_len) + sizeof(struct rpc_package_head) - sizeof(union rpc_package_body*) + sizeof(union rpc_package_body);
+  data = (char *)malloc(pkg_len);
+
+  cursor = sizeof(rpcpkg_len);
+  memcpy(data + cursor, &head->type, sizeof(head->type));
+  cursor += sizeof(head->type);
+  memcpy(data + cursor, &head->source, sizeof(head->source));
+  cursor += sizeof(head->source);
+  memcpy(data + cursor, &head->destination, sizeof(head->destination));
+  cursor += sizeof(head->destination);
+  memcpy(data + cursor, &head->id, sizeof(head->id));
+  cursor += sizeof(head->id);
+
+  struct rpc_request *request;
+  request = &head->body->request;
+
+  memcpy(data + cursor, &request->method_len, sizeof(request->method_len));
+  cursor += sizeof(request->method_len);
+  temp_len = htons(request->parameter_len);
+  memcpy(data + cursor, &temp_len, sizeof(request->parameter_len));
+  cursor += sizeof(request->parameter_len);
+
+  memcpy(data + cursor, request->method, request->method_len);
+  cursor += request->method_len;
+  memcpy(data + cursor, request->parameter, request->parameter_len);
+  cursor += request ->parameter_len;
+
+  // 写上包长于头部
+  temp_len = cursor - sizeof(rpcpkg_len);
+  temp_len = htons(temp_len);
+  memcpy(data, &temp_len, sizeof(temp_len));
+
+  *cursor_result = cursor;
+
+  return data;
+}
+
+
+
 struct rpc_package_head *protocol_decode(const struct rpc_package *package) {
   assert(package->total == package->received);
 
