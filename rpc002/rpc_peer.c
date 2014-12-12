@@ -387,8 +387,8 @@ int peer_request(const char *peer_name, const char *method, const char *paramete
       cursor += request ->parameter_len;
 
       // 写上包长于头部
-      cursor -= sizeof(rpcpkg_len);
-      temp_len = htons(cursor);
+      temp_len = cursor - sizeof(rpcpkg_len);
+      temp_len = htons(temp_len);
       memcpy(data, &temp_len, sizeof(temp_len));
 
       // 释放结构体
