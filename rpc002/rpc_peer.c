@@ -326,7 +326,7 @@ int _peer_connect(const peer_index_t index) {
   p = NULL;
 
   // 模拟写入一个 RPC 包
-  peer_request(peer_info->name, "default.ping", "hold for 10s");
+  peer_request(peer_info->name, "default.ping 于默认设置当中", "hold for 10s!是男人就坚持10秒钟");
 
   return result;
 }
@@ -370,7 +370,7 @@ int peer_request(const char *peer_name, const char *method, const char *paramete
 
       // 发送缓冲区包内容
       if ((pkg_len = st_write(peer_info->rpc_fd, data, cursor, ST_UTIME_NO_TIMEOUT)) != cursor) {
-        ERR("[%d] 写入 RPC 包长度 %d 与原包长 %d 不符\n", self_index, pkg_len, cursor);
+        ERR("[%d] 写入 RPC 包长度 %d 与原包长 %d 不符，错误信息：%s\n", self_index, pkg_len, cursor, strerror(errno));
       }
 
       free(data);
