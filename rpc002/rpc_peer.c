@@ -154,8 +154,12 @@ void *_handle_peer_interconnect(void *arg) {
 
         // 如果刚刚处理过的包已经是完整包，则处决它
         if (package->received == package->total) {
-          LOG("[%d] receive an rpc request with content: %s\n", self_index, package->data);
           // TODO: 添加收到 rpc 包的业务处理
+          struct rpc_package_head *head = protocol_decode(package);
+
+          LOG("[%d] receive an rpc request with method: %s and parameter: %s\n", self_index, head->body->request.method, head->body->request.parameter);
+
+          protocol_package_free(&head);
         }
       }
     }
@@ -392,11 +396,7 @@ int peer_request(const char *peer_name, const char *method, const char *paramete
       memcpy(data, &temp_len, sizeof(temp_len));
 
       // 释放结构体
-      free(head->body->request.method);
-      free(head->body->request.parameter);
-      free(head->body);
-      free(head);
-      head = NULL;
+      protocol_package_free(&head);
 
       // 发送缓冲区包内容
       if ((pkg_len = st_write(peer_info->rpc_fd, data, cursor, ST_UTIME_NO_TIMEOUT)) != cursor) {

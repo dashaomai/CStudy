@@ -63,6 +63,7 @@ union rpc_package_body {
 
 
 enum rpc_package_type {
+  UNKNOW = '\0',
   REQUEST,
   RESPONSE
 };
@@ -78,5 +79,8 @@ struct rpc_package_head {
   union rpc_package_body *body;
 };
 
-const struct rpc_package_head *protocol_decode(const struct rpc_package *package);
+struct rpc_package_head *protocol_decode(const struct rpc_package *package);
 struct rpc_package_head *protocol_package_create(enum rpc_package_type type, const peer_index_t source, const peer_index_t distination, const uint8_t id, const char *method, const char *parameter);
+
+
+void protocol_package_free(struct rpc_package_head **phead);
