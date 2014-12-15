@@ -16,8 +16,6 @@ char *malloc_and_copy(const char *src, const rpcpkg_len start, const rpcpkg_len 
 }
 
 
-
-
 char *protocol_encode(const struct rpc_package_head *head, rpcpkg_len *cursor_result) {
   rpcpkg_len pkg_len, temp_len, cursor;
   char *data;
@@ -48,18 +46,39 @@ char *protocol_encode(const struct rpc_package_head *head, rpcpkg_len *cursor_re
   cursor += sizeof(head->id);
 
   struct rpc_request *request;
+  struct rpc_response *response;
+
   request = &head->body->request;
+  response = &head->body->response;
 
-  memcpy(data + cursor, &request->method_len, sizeof(request->method_len));
-  cursor += sizeof(request->method_len);
-  temp_len = htons(request->parameter_len);
-  memcpy(data + cursor, &temp_len, sizeof(request->parameter_len));
-  cursor += sizeof(request->parameter_len);
+  switch (head->type) {
+    case UNKNOW:
+      break;
 
-  memcpy(data + cursor, request->method, request->method_len);
-  cursor += request->method_len;
-  memcpy(data + cursor, request->parameter, request->parameter_len);
-  cursor += request ->parameter_len;
+    case REQUEST:
+      memcpy(data + cursor, &request->method_len, sizeof(request->method_len));
+      cursor += sizeof(request->method_len);
+      temp_len = htons(request->parameter_len);
+      memcpy(data + cursor, &temp_len, sizeof(request->parameter_len));
+      cursor += sizeof(request->parameter_len);
+
+      memcpy(data + cursor, request->method, request->method_len);
+      cursor += request->method_len;
+      memcpy(data + cursor, request->parameter, request->parameter_len);
+      cursor += request ->parameter_len;
+
+      break;
+
+    case RESPONSE:
+      temp_len = htons(response->result_len);
+      memcpy(data + cursor, &temp_len, sizeof(response->result_len));
+      cursor += sizeof(response->result_len);
+
+      memcpy(data + cursor, response->result, response->result_len);
+      cursor += response->result_len;
+
+      break;
+  }
 
   // 写上包长于头部
   temp_len = cursor - sizeof(rpcpkg_len);
@@ -155,8 +174,8 @@ struct rpc_package_head *protocol_package_create(enum rpc_package_type type, con
     case RESPONSE:
       response = &(head->body->response);
 
-      response->result_len = strlen(parameter);
-      response->result = malloc_and_copy(parameter, 0, response->result_len);
+      response->result_len = strlen(method);
+      response->result = malloc_and_copy(method, 0, response->result_len);
 
       break;
   }

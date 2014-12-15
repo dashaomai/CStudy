@@ -21,6 +21,7 @@ void *_peer_task_worker(void *arg);           // 处理具体某一个业务内�
 int _peer_listen(const peer_index_t index);
 void _peer_accept(void);
 int _peer_connect(const peer_index_t index);
+void _peer_simulate_request(const peer_index_t index);
 
 // RPC 任务队列，内由 struct rpc_package_head 链表构成
 static struct rpc_queue *queue;
@@ -65,6 +66,11 @@ void *_interconnect_to_peers(void *arg) {
     if (i != self_index)
       if (_peer_connect(i) != 0)
         ERR("[%d] failed to connect to peer #%d: %s\n", self_index, i, strerror(errno));
+  }
+
+  for (i = 0; i < peer_count; i++) {
+    if (i != self_index)
+      _peer_simulate_request(i);
   }
 
   LOG("[%d] 互联完毕\n", self_index);
@@ -164,12 +170,28 @@ void *_handle_peer_interconnect(void *arg) {
 
         // 如果刚刚处理过的包已经是完整包，则处决它
         if (package->received == package->total) {
-          // TODO: 添加收到 rpc 包的业务处理
           struct rpc_package_head *head = protocol_decode(package);
 
-          LOG("[%d] receive an rpc request with method: %s and parameter: %s\n", self_index, head->body->request.method, head->body->request.parameter);
+          switch (head->type) {
+            case UNKNOW:
+              break;
 
-          queue_put(queue, head);
+            case REQUEST:
+              LOG("[%d] receive an rpc request with method: %s and parameter: %s\n", self_index, head->body->request.method, head->body->request.parameter);
+
+              queue_put(queue, head);
+
+              break;
+
+            case RESPONSE:
+              LOG("[%d] response an rpc request with result: %s\n", self_index, head->body->response.result);
+
+              // TODO: 对 response 对象的后续处理
+              protocol_package_free(head);
+              head = NULL;
+
+              break;
+          }
         }
       }
     }
@@ -209,6 +231,26 @@ void *_peer_task_worker(void *arg) {
   LOG("[%d] 处理一个 %d -> %d 的RPC 业务 #%d\n", self_index, task->source, task->destination, task->id);
 
   // TODO: 编写业务的通用处理办法
+  struct rpc_package_head *response;
+  response = protocol_package_create(RESPONSE, task->destination, task->source, task->id, "任务完成！Mission Completeion!", NULL);
+
+  rpcpkg_len pkg_len, sended;
+  char *data;
+  struct  peer_info *peer_info;
+
+  peer_info = &peer_list[response->destination];
+
+  data = protocol_encode(response, &pkg_len);
+
+  protocol_package_free(response);
+  response = NULL;
+
+  if ((sended = st_write(peer_info->rpc_fd, data, pkg_len, ST_UTIME_NO_TIMEOUT)) != pkg_len) {
+    ERR("[%d] 写回 RPC 包长度 %d 与原包长 %d 不符，错误信息：%s\n", self_index, sended, pkg_len, strerror(errno));
+  }
+
+  free(data);
+  data = NULL;
 
   // 清理和结束
   protocol_package_free(task);
@@ -379,10 +421,18 @@ int _peer_connect(const peer_index_t index) {
   ai = NULL;
   p = NULL;
 
-  // 模拟写入一个 RPC 包
-  peer_request(peer_info->name, "default.ping 于默认设置当中", "hold for 10s!是男人就坚持10秒钟");
 
   return result;
+}
+
+void _peer_simulate_request(const peer_index_t index) {
+  struct peer_info *peer_info;
+  peer_info = &peer_list[index];
+
+  // 模拟写入一个 RPC 包
+  st_sleep(1);
+
+  peer_request(peer_info->name, "default.ping 于默认设置当中", "hold for 10s!是男人就坚持10秒钟");
 }
 
 int peer_request(const char *peer_name, const char *method, const char *parameter) {
