@@ -33,13 +33,13 @@ void peer_create(struct peer_info *dest, const peer_index_t index, const char *n
 }
 
 int peer_listen_and_interconnect(void) {
-  // 创建自己的任务队列
-  queue = queue_create();
-  st_thread_create(_queue_worker, queue, 0, 0);
-
   // 先创建自己的侦听
   if (_peer_listen(self_index) != 0)
     return -1;
+
+  // 创建自己的任务队列
+  queue = queue_create();
+  st_thread_create(_queue_worker, queue, 0, 0);
 
   // 用线程进行到其它结点的互联
   if (st_thread_create(_interconnect_to_peers, NULL, 0, 0) == NULL) {
@@ -206,7 +206,7 @@ void *_peer_task_worker(void *arg) {
   task = (struct rpc_package_head*)arg;
   arg = NULL;
 
-  LOG("[%d] 处理一个 RPC 业务 #%d\n", self_index, task->id);
+  LOG("[%d] 处理一个 %d -> %d 的RPC 业务 #%d\n", self_index, task->source, task->destination, task->id);
 
   // TODO: 编写业务的通用处理办法
 
