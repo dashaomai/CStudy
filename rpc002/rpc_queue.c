@@ -18,7 +18,7 @@ void queue_free(struct rpc_queue *queue) {
   struct rpc_package_head *p;
 
   for (p = queue->first; p != NULL; p = p->next) {
-    protocol_package_free(&p);
+    protocol_package_free(p);
   }
   free(queue);
 }

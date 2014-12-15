@@ -393,7 +393,8 @@ int peer_request(const char *peer_name, const char *method, const char *paramete
       data = protocol_encode(head, &cursor);
 
       // 释放结构体
-      protocol_package_free(&head);
+      protocol_package_free(head);
+      head = NULL;
 
       // 发送缓冲区包内容
       if ((pkg_len = st_write(peer_info->rpc_fd, data, cursor, ST_UTIME_NO_TIMEOUT)) != cursor) {
@@ -401,6 +402,7 @@ int peer_request(const char *peer_name, const char *method, const char *paramete
       }
 
       free(data);
+      data = NULL;
 
       return cursor;
     }

@@ -167,8 +167,7 @@ struct rpc_package_head *protocol_package_create(enum rpc_package_type type, con
 
 
 
-void protocol_package_free(struct rpc_package_head **phead) {
-  struct rpc_package_head *head = *phead;
+void protocol_package_free(struct rpc_package_head *head) {
   assert(head->body);
 
   switch (head->type) {
@@ -187,6 +186,4 @@ void protocol_package_free(struct rpc_package_head **phead) {
 
   free(head->body);
   free(head);
-
-  *phead = NULL;
 }
