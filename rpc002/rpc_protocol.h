@@ -3,6 +3,9 @@
  */
 #include <stdint.h>
 
+#ifndef _RPC_PROTOCOL_H
+#define _RPC_PROTOCOL_H
+
 #define peer_index_t uint8_t
 #define MAX_INDEX_OF_PEER sizeof(peer_index_t)
 
@@ -86,3 +89,5 @@ struct rpc_package_head *protocol_package_create(enum rpc_package_type type, con
 
 
 void protocol_package_free(struct rpc_package_head *head);
+
+#endif

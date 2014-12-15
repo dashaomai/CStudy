@@ -13,9 +13,10 @@
 
 #include "../beej/common.h"
 
-void *_interconnect_to_peers(void *arg);
-void *_handle_peer_interconnect(void *arg);
-void *_queue_worker(void *arg);
+void *_interconnect_to_peers(void *arg);      // 到其它结点进行互联的线程，跑完就结束
+void *_handle_peer_interconnect(void *arg);   // 收到来自其它结点的 RPC 连接后，由该线程掌控
+void *_queue_worker(void *arg);               // 不断查询队列内是否有任务的线程
+void *_peer_task_worker(void *arg);           // 处理具体某一个业务内容的线程
 
 int _peer_listen(const peer_index_t index);
 void _peer_accept(void);
@@ -168,7 +169,7 @@ void *_handle_peer_interconnect(void *arg) {
 
           LOG("[%d] receive an rpc request with method: %s and parameter: %s\n", self_index, head->body->request.method, head->body->request.parameter);
 
-          queue_put(head);
+          queue_put(queue, head);
         }
       }
     }
@@ -180,16 +181,42 @@ close_fd_and_quit:
   return 0;
 }
 
+static uint16_t      worker_thread_count = 0;
+
 void *_queue_worker(void *arg) {
   struct rpc_queue *queue;
   queue = (struct rpc_queue*)arg;
   arg = NULL;
+  struct rpc_package_head *head;
 
-  for (; st_sleep(1); ) {
-    queue_schedule(queue);
+  for (; ; st_usleep(10)) {
+    if (worker_thread_count < 1000 && queue->count > 0) {
+      head = queue_get(queue);
+      assert(head != NULL);
+
+      st_thread_create(_peer_task_worker, head, 0, 0);
+
+      worker_thread_count ++;
+    }
   }
 }
 
+void *_peer_task_worker(void *arg) {
+  struct rpc_package_head *task;
+  task = (struct rpc_package_head*)arg;
+  arg = NULL;
+
+  LOG("[%d] 处理一个 RPC 业务 #%d\n", self_index, task->id);
+
+  // TODO: 编写业务的通用处理办法
+
+  // 清理和结束
+  protocol_package_free(task);
+  task = NULL;
+
+  worker_thread_count --;
+  return 0;
+}
 
 
 
