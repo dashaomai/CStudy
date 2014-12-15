@@ -132,9 +132,9 @@ void *_handle_peer_interconnect(void *arg) {
   for (;;) {
     if ((len = st_read(client, buf, sizeof(buf), ST_UTIME_NO_TIMEOUT)) < 0) {
       ERR("[%d] failed when read from client #%d.\n", self_index, client_index);
-      goto close_fd_and_quit;
+      goto free_package_close_fd_and_quit;
     } else if (len == 0) {
-      goto close_fd_and_quit;
+      goto free_package_close_fd_and_quit;
     } else {
       if (len > sizeof(buf))
         LOG("[%d] read %ld bytes into buffer with size: %lu bytes.\n", self_index, len, sizeof(buf));
@@ -197,8 +197,9 @@ void *_handle_peer_interconnect(void *arg) {
     }
   }
 
-close_fd_and_quit:
+free_package_close_fd_and_quit:
   free(package);
+close_fd_and_quit:
   st_netfd_close(client);
   return 0;
 }

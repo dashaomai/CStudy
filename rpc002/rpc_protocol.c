@@ -20,18 +20,17 @@ char *protocol_encode(const struct rpc_package_head *head, rpcpkg_len *cursor_re
   rpcpkg_len pkg_len, temp_len, cursor;
   char *data;
 
-  // pkg_len = sizeof(rpcpkg_len) + sizeof(struct rpc_package_head) - sizeof(union rpc_package_body*) + sizeof(union rpc_package_body);
   switch (head->type) {
     case UNKNOW:
-      break;
+      return NULL;
 
     case REQUEST:
       pkg_len = sizeof(rpcpkg_len) + sizeof(head->type) + sizeof(head->source) + sizeof(head->destination) + sizeof(head->id) + head->body->request.method_len + head->body->request.parameter_len;
-        break;
+      break;
 
     case RESPONSE:
-        pkg_len = sizeof(rpcpkg_len) + sizeof(head->type) + sizeof(head->source) + sizeof(head->destination) + sizeof(head->id) + head->body->response.result_len;
-        break;
+      pkg_len = sizeof(rpcpkg_len) + sizeof(head->type) + sizeof(head->source) + sizeof(head->destination) + sizeof(head->id) + head->body->response.result_len;
+      break;
   }
   data = (char *)malloc(pkg_len);
 
