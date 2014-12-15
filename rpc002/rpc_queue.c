@@ -13,7 +13,6 @@ struct rpc_queue *queue_create(void) {
 }
 
 void queue_free(struct rpc_queue *queue) {
-  // TODO: 还需要遍历链表，将现队列里每个 struct rpc_package_head 结点都释放掉
   struct rpc_package_head *p;
 
   for (p = queue->first; p != NULL; p = p->next) {
