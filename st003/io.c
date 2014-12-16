@@ -68,7 +68,11 @@ void *handle_conn(void *arg) {
 
   received = st_read(client, buff, len, ST_UTIME_NO_TIMEOUT);
 
-  fprintf(stdout, "%s\n", buff);
+  // fprintf(stdout, "%s\n", buff);
+  st_netfd_t STDOUT;
+  STDOUT = st_netfd_open(STDOUT_FILENO);
+
+  st_write(STDOUT, buff, sizeof(buff), ST_UTIME_NO_TIMEOUT);
 
   received = st_write(client, buff, received, ST_UTIME_NO_TIMEOUT);
 
