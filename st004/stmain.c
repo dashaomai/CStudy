@@ -5,6 +5,7 @@
 #include <st.h>
 
 void *thread_main(void *arg);
+int add_all(int v1, ...);
 
 int main(int argc, const char *argv[])
 {
@@ -20,7 +21,23 @@ int main(int argc, const char *argv[])
 }
 
 void *thread_main(void *arg) {
-  printf("[%d] 当前在 state-threads 线程内\n", 2);
+  int sum;
+  sum = add_all(1,2,3,4,5,6,7);
 
   return 0;
+}
+
+int add_all(int v1, ...) {
+  va_list ap;
+
+  int i, sum;
+  sum = 0;
+
+  va_start(ap, v1);
+  for (i = v1; i != -1; i = va_arg(ap, int)) {
+    sum += i;
+  }
+  va_end(ap);
+
+  return sum;
 }
