@@ -5,6 +5,7 @@
 #include <assert.h>
 
 #include "parameter.h"
+#include "serial.h"
 
 int sum_all(uint16_t v1, int16_t v2, int8_t v3, uint8_t v4, uint16_t v5, int16_t v6);
 int sum_all_proxy(struct parameter_queue *queue);
@@ -36,6 +37,21 @@ int main(int argc, const char *argv[])
   parameter_queue_put(queue, parameter_alloc_array(FLOAT32, float16s, sizeof(float16s) / sizeof(float16s[0])));
 
   assert(queue->count == 7);
+
+  // 测试下参数队列的编、解码
+  struct serial_binary *binary;
+  void *bytes;
+  binary = serial_encode(queue);
+  bytes = binary->bytes + 2;
+
+  printf("编码参数队列，得到以下结果：\n<< ");
+  uint16_t i;
+
+  for (i=0; i<binary->length; i++) {
+    printf("0x%2x ", *(uint8_t*)(bytes + i));
+  }
+
+  printf(">>\n");
 
   printf("The sum_all_proxy result is: %d\n", sum_all_proxy(queue));
   printf("The sum_float_proxy result is : %f\n", sum_float_proxy(parameter_queue_get(queue)));
