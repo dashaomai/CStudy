@@ -48,13 +48,23 @@ int main(int argc, const char *argv[])
   uint16_t i;
 
   for (i=0; i<binary->length; i++) {
-    printf("0x%2x ", *(uint8_t*)(bytes + i));
+    printf("%02x ", *(uint8_t*)(bytes + i));
   }
 
   printf(">>\n");
 
-  printf("The sum_all_proxy result is: %d\n", sum_all_proxy(queue));
-  printf("The sum_float_proxy result is : %f\n", sum_float_proxy(parameter_queue_get(queue)));
+  // 输出原参数队列的计算结果
+  printf("The 1'st sum_all_proxy result is: %d\n", sum_all_proxy(queue));
+  printf("The 1'st sum_float_proxy result is : %f\n", sum_float_proxy(parameter_queue_get(queue)));
+
+  parameter_queue_free(queue);
+
+  queue = serial_decode(binary);
+  free(binary);
+
+  // 输出解码参数队列的计算结果
+  printf("The 2'nd sum_all_proxy result is: %d\n", sum_all_proxy(queue));
+  printf("The 2'nd sum_float_proxy result is : %f\n", sum_float_proxy(parameter_queue_get(queue)));
 
   return 0;
 }

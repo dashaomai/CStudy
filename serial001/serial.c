@@ -32,6 +32,7 @@ struct serial_binary *serial_encode(struct parameter_queue *queue) {
 
   binary = (struct serial_binary *)malloc(sizeof(struct serial_binary) + total_length);
   binary->length = total_length;
+  binary->bytes = (void*)binary + sizeof(*binary);
 
   bytes = binary->bytes;
 
@@ -142,7 +143,7 @@ struct parameter_queue *serial_decode(struct serial_binary *binary) {
   // 读取参数队列内元素总数
   queue = parameter_queue_alloc();
 
-  count = *(uint8_t*)bytes + 1;
+  count = *(uint8_t*)bytes;
   cursor += 1;
 
   // 逐个解码参数对象
