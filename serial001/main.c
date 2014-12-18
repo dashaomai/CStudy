@@ -14,10 +14,6 @@ float sum_float_proxy(struct parameter *param);
 
 int main(int argc, const char *argv[])
 {
-  struct method m;
-  m.name = "rpc_call";
-  m.length = strlen(m.name);
-
   struct parameter_queue *queue;
   queue = parameter_queue_alloc();
 

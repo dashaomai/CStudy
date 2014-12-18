@@ -62,16 +62,12 @@ struct parameter *parameter_alloc(const enum parameter_type type, const void *va
     switch (type) {
         case INT8:
         case UINT8:
-        case FLOAT8:
-        case UFLOAT8:
         case BOOLEAN:
             length = 1;
             break;
 
         case INT16:
         case UINT16:
-        case FLOAT16:
-        case UFLOAT16:
             length = 2;
             break;
 
@@ -80,6 +76,13 @@ struct parameter *parameter_alloc(const enum parameter_type type, const void *va
         case FLOAT32:
         case UFLOAT32:
             length = 4;
+            break;
+
+        case INT64:
+        case UINT64:
+        case FLOAT64:
+        case UFLOAT64:
+            length = 8;
             break;
 
         case STRING:
@@ -110,8 +113,6 @@ struct parameter *parameter_alloc_array(const enum parameter_type type, const vo
   switch (type) {
     case INT8:
     case UINT8:
-    case FLOAT8:
-    case UFLOAT8:
     case BOOLEAN:
       unit_length = 1;
       total_length = length * unit_length;
@@ -119,8 +120,6 @@ struct parameter *parameter_alloc_array(const enum parameter_type type, const vo
 
     case INT16:
     case UINT16:
-    case FLOAT16:
-    case UFLOAT16:
       unit_length = 2;
       total_length = length * unit_length;
       break;
@@ -130,6 +129,14 @@ struct parameter *parameter_alloc_array(const enum parameter_type type, const vo
     case FLOAT32:
     case UFLOAT32:
       unit_length = 4;
+      total_length = length * unit_length;
+      break;
+
+    case INT64:
+    case UINT64:
+    case FLOAT64:
+    case UFLOAT64:
+      unit_length = 8;
       total_length = length * unit_length;
       break;
 

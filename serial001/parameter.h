@@ -3,19 +3,14 @@
 #ifndef PARAMETER_H
 #define PARAMETER_H
 
-struct method {
-    uint8_t   length;
-    char      *name;
-};
-
 enum parameter_type {
     INT8 = '\0', UINT8,
     INT16, UINT16,
     INT32, UINT32,
+    INT64, UINT64,
 
-    FLOAT8, UFLOAT8,
-    FLOAT16, UFLOAT16,
     FLOAT32, UFLOAT32,
+    FLOAT64, UFLOAT64,
 
     BOOLEAN,
 
@@ -26,10 +21,10 @@ enum parameter_type {
 
 struct parameter {
     enum parameter_type   type;         // 当前参数的类型
+    uint16_t              length;
     enum parameter_type   scala_type;   // 只有 type == ARRAY 时才有的标量类型
-    void      *value;
-    uint16_t  length;
-    uint16_t  scala_count;              // 只有 type == ARRAY 时才有的数组长度
+    uint16_t              scala_count;  // 只有 type == ARRAY 时才有的数组长度
+    void                  *value;
     struct parameter      *next;
 };
 
