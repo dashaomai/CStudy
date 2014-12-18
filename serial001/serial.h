@@ -11,4 +11,4 @@ struct serial_binary {
 };
 
 struct serial_binary *serial_encode(struct parameter_queue *queue);
-struct parameter_queue *serial_decode(struct serial_binary*bytes);
+struct parameter_queue *serial_decode(struct serial_binary *binary);
