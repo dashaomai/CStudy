@@ -1,7 +1,7 @@
-#include <stdint.h>
+#ifndef _PARAMETER_H
+#define _PARAMETER_H
 
-#ifndef PARAMETER_H
-#define PARAMETER_H
+#include <stdint.h>
 
 enum parameter_type {
     INT8 = '\0', UINT8,

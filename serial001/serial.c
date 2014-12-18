@@ -7,8 +7,6 @@ void _serial_encode_value(void *dest, struct parameter *param);
 void _serial_decode_value(void *src, struct parameter *param);
 
 
-
-
 struct serial_binary *serial_encode(struct parameter_queue *queue) {
   struct serial_binary *binary;
   uint8_t *bytes;
