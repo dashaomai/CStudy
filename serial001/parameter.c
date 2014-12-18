@@ -1,48 +1,50 @@
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "parameter.h"
 
 struct parameter_queue *parameter_queue_alloc(void) {
-    struct parameter_queue *params;
+    struct parameter_queue *queue;
 
-    params = (struct parameter_queue *)calloc(1, sizeof(*params));
+    queue = (struct parameter_queue *)calloc(1, sizeof(*queue));
 
-    return params;
+    return queue;
 }
 
-void parameter_queue_free(struct parameter_queue *params) {
-    free(params);
+void parameter_queue_free(struct parameter_queue *queue) {
+    free(queue);
 }
 
-void parameter_queue_put(struct parameter_queue *params, struct parameter *param) {
-    if (params->count == 0) {
-        params->head = param;
+void parameter_queue_put(struct parameter_queue *queue, struct parameter *param) {
+    if (queue->count == 0) {
+        queue->head = param;
     } else {
-        params->tail->next = param;
+        queue->tail->next = param;
     }
-    
-    params->tail = param;
-    params->count ++;
+
+    queue->tail = param;
+    queue->count ++;
 }
 
-struct parameter *parameter_queue_get(struct parameter_queue *params) {
+struct parameter *parameter_queue_get(struct parameter_queue *queue) {
     struct parameter *param;
-    
-    if (params->count > 0) {
-        param = params->head;
-        params->head = param->next;
+
+    if (queue->count > 0) {
+        param = queue->head;
+        queue->head = param->next;
         param->next = NULL;
 
-        params->count --;
-        
-        if (params->count == 0) {
-            params->tail = NULL;
+        queue->count --;
+
+        if (queue->count == 0) {
+            assert(queue->head == NULL);
+            queue->tail = NULL;
         }
     } else {
         param = NULL;
     }
-    
+
     return param;
 }
 
