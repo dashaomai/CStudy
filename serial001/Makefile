@@ -2,11 +2,11 @@ CC = cc
 COMPILE = -g -c
 LINK =
 
-all : serial.o parameter.o
+all : main.o parameter.o
 	$(CC) $(LINK) -o serial *.o
 
-serial.o : serial.c
-	$(CC) $(COMPILE) serial.c
+main.o : main.c
+	$(CC) $(COMPILE) main.c
 
 parameter.o : parameter.c parameter.h
 	$(CC) $(COMPILE) parameter.c
