@@ -13,6 +13,13 @@ struct parameter_queue *parameter_queue_alloc(void) {
 }
 
 void parameter_queue_free(struct parameter_queue *queue) {
+    struct parameter *param, *next;
+
+    for (param = parameter_queue_get(queue); param != NULL; param = next) {
+      next = param->next;
+
+      parameter_free(param);
+    }
     free(queue);
 }
 
@@ -149,6 +156,6 @@ struct parameter *parameter_alloc_array(const enum parameter_type type, const vo
 }
 
 void parameter_free(struct parameter *param) {
-  // free(param->value);
+  // 只需要 free param 指针，不需要单独释放 param->value
   free(param);
 }
