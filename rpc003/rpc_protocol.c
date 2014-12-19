@@ -9,7 +9,7 @@
 
 char *malloc_and_copy(const char *src, const rpcpkg_len start, const rpcpkg_len length) {
   char *buffer = (char *)malloc(length + 1);
-  memcpy(buffer, src + start, length);
+  memcpy(buffer, &src[start], length);
   buffer[length] = '\0';
 
   return buffer;
@@ -100,9 +100,7 @@ struct rpc_package_head *protocol_decode(const struct rpc_package *package) {
   head->body = (union rpc_package_body*)calloc(1, sizeof(union rpc_package_body));
 
   rpcpkg_len    len_of_head;
-  // len_of_head = sizeof(struct rpc_package_head) - sizeof(union rpc_package_body*);
   len_of_head = sizeof(head->type) + sizeof(head->source) + sizeof(head->destination) + sizeof(head->id);
-  // len_of_body = package->total - len_of_head;
 
   memcpy(head, package->data, len_of_head);
 
@@ -117,9 +115,9 @@ struct rpc_package_head *protocol_decode(const struct rpc_package *package) {
       break;
 
     case REQUEST:
-      request->method_len = *(uint8_t*)(package->data + cursor);
+      request->method_len = (uint8_t )package->data[cursor];
       cursor += sizeof(request->method_len);
-      request->parameter_len = ntohs(*(uint16_t*)(package->data + cursor));
+      request->parameter_len = ntohs(*(uint16_t*)(&package->data[cursor]));
       cursor += sizeof(request->parameter_len);
 
       request->method = malloc_and_copy((const char*)package->data, cursor, request->method_len);
@@ -130,7 +128,7 @@ struct rpc_package_head *protocol_decode(const struct rpc_package *package) {
       break;
 
     case RESPONSE:
-      response->result_len = ntohs(*(uint16_t*)(package->data + cursor));
+      response->result_len = ntohs(*(uint16_t*)(&package->data[cursor]));
       cursor += sizeof(response->result_len);
 
       response->result = malloc_and_copy((const char*)package->data, cursor, response->result_len);
