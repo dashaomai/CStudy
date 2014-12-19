@@ -1,10 +1,12 @@
 /**
  * 这是 RPC 通讯协议相关数据结构及逻辑
  */
-#include <stdint.h>
-
 #ifndef _RPC_PROTOCOL_H
 #define _RPC_PROTOCOL_H
+
+#include <stdint.h>
+
+#include "rpc_parameter.h"
 
 #define peer_index_t uint8_t
 #define MAX_INDEX_OF_PEER sizeof(peer_index_t)
