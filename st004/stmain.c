@@ -10,7 +10,7 @@ int main(int argc, const char *argv[])
 {
   st_init();
 
-  printf("[%d] 当前在主线程内\n", 1);
+  printf("entering main.\n");
 
   st_thread_create(thread_main, NULL, 0, 0);
 
@@ -20,7 +20,8 @@ int main(int argc, const char *argv[])
 }
 
 void *thread_main(void *arg) {
-  printf("[%d] 当前在 state-threads 线程内\n", 2);
+  // this line should cause Error on FreeBSD 10.1 (X64 or Amd64)
+  printf("entering the state-threads.\n");
 
   return 0;
 }
