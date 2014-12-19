@@ -185,7 +185,7 @@ void *_handle_peer_interconnect(void *arg) {
               break;
 
             case RESPONSE:
-              LOG("[%d] response an rpc request with result: %s\n", self_index, head->body->response.queue);
+              LOG("[%d] response an rpc request with result: %d\n", self_index, *(uint8_t*)head->body->response.queue->tail->value);
 
               // TODO: 对 response 对象的后续处理
               protocol_package_free(head);
