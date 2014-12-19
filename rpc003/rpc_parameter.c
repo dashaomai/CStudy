@@ -12,15 +12,15 @@ struct parameter_queue *parameter_queue_alloc(void) {
     return queue;
 }
 
-void parameter_queue_free(struct parameter_queue *queue) {
+void parameter_queue_free(struct parameter_queue *parameters) {
     struct parameter *param, *next;
 
-    for (param = parameter_queue_get(queue); param != NULL; param = next) {
+    for (param = parameter_queue_get(parameters); param != NULL; param = next) {
       next = param->next;
 
       parameter_free(param);
     }
-    free(queue);
+    free(parameters);
 }
 
 void parameter_queue_put(struct parameter_queue *queue, struct parameter *param) {

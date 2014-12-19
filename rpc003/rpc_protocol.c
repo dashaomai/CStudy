@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 
 #include "rpc_protocol.h"
+#include "rpc_serial.h"
 #include "rpc_log.h"
 
 char *malloc_and_copy(const char *src, const rpcpkg_len start, const rpcpkg_len length) {
@@ -25,11 +26,11 @@ char *protocol_encode(const struct rpc_package_head *head, rpcpkg_len *cursor_re
       return NULL;
 
     case REQUEST:
-      pkg_len = sizeof(rpcpkg_len) + sizeof(head->type) + sizeof(head->source) + sizeof(head->destination) + sizeof(head->id) + head->body->request.method_len + head->body->request.parameter_len;
+      pkg_len = sizeof(rpcpkg_len) + sizeof(head->type) + sizeof(head->source) + sizeof(head->destination) + sizeof(head->id) + head->body->request.method_len;
       break;
 
     case RESPONSE:
-      pkg_len = sizeof(rpcpkg_len) + sizeof(head->type) + sizeof(head->source) + sizeof(head->destination) + sizeof(head->id) + head->body->response.result_len;
+      pkg_len = sizeof(rpcpkg_len) + sizeof(head->type) + sizeof(head->source) + sizeof(head->destination) + sizeof(head->id);
       break;
   }
   data = (char *)malloc(pkg_len);
@@ -50,6 +51,8 @@ char *protocol_encode(const struct rpc_package_head *head, rpcpkg_len *cursor_re
   request = &head->body->request;
   response = &head->body->response;
 
+  struct serial_binary *binary;
+
   switch (head->type) {
     case UNKNOW:
       break;
@@ -57,24 +60,25 @@ char *protocol_encode(const struct rpc_package_head *head, rpcpkg_len *cursor_re
     case REQUEST:
       memcpy(data + cursor, &request->method_len, sizeof(request->method_len));
       cursor += sizeof(request->method_len);
-      temp_len = htons(request->parameter_len);
-      memcpy(data + cursor, &temp_len, sizeof(request->parameter_len));
-      cursor += sizeof(request->parameter_len);
+
+      binary = serial_encode(request->queue);
 
       memcpy(data + cursor, request->method, request->method_len);
       cursor += request->method_len;
-      memcpy(data + cursor, request->parameter, request->parameter_len);
-      cursor += request ->parameter_len;
+      memcpy(data + cursor, binary->bytes, binary->length);
+      cursor += binary->length;
+
+      free(binary);
 
       break;
 
     case RESPONSE:
-      temp_len = htons(response->result_len);
-      memcpy(data + cursor, &temp_len, sizeof(response->result_len));
-      cursor += sizeof(response->result_len);
+      binary = serial_encode(response->queue);
 
-      memcpy(data + cursor, response->result, response->result_len);
-      cursor += response->result_len;
+      memcpy(data + cursor, binary->bytes, binary->length);
+      cursor += binary->length;
+
+      free(binary);
 
       break;
   }
@@ -109,6 +113,7 @@ struct rpc_package_head *protocol_decode(const struct rpc_package *package) {
 
   struct rpc_request *request = &head->body->request;
   struct rpc_response *response = &head->body->response;
+  struct serial_binary *binary;
 
   switch (head->type) {
     case UNKNOW:
@@ -117,21 +122,28 @@ struct rpc_package_head *protocol_decode(const struct rpc_package *package) {
     case REQUEST:
       request->method_len = (uint8_t )package->data[cursor];
       cursor += sizeof(request->method_len);
-      request->parameter_len = ntohs(*(uint16_t*)(&package->data[cursor]));
-      cursor += sizeof(request->parameter_len);
 
       request->method = malloc_and_copy((const char*)package->data, cursor, request->method_len);
       cursor += request->method_len;
 
-      request->parameter = malloc_and_copy((const char*)package->data, cursor, request->parameter_len);
+      binary = (struct serial_binary*)malloc(sizeof(struct serial_binary));
+      binary->length = package->total - cursor;
+      binary->bytes = (void*)(package->data + cursor);
+
+      request->queue = serial_decode(binary);
+
+      free(binary);
 
       break;
 
     case RESPONSE:
-      response->result_len = ntohs(*(uint16_t*)(&package->data[cursor]));
-      cursor += sizeof(response->result_len);
+      binary = (struct serial_binary*)malloc(sizeof(struct serial_binary));
+      binary->length = package->total - cursor;
+      binary->bytes = (void*)(package->data + cursor);
 
-      response->result = malloc_and_copy((const char*)package->data, cursor, response->result_len);
+      response->queue = serial_decode(binary);
+
+      free(binary);
 
       break;
   }
@@ -139,7 +151,7 @@ struct rpc_package_head *protocol_decode(const struct rpc_package *package) {
   return head;
 }
 
-struct rpc_package_head *protocol_package_create(enum rpc_package_type type, const peer_index_t source, const peer_index_t destination, const uint8_t id, const char *method, const char *parameter) {
+struct rpc_package_head *protocol_package_create(enum rpc_package_type type, const peer_index_t source, const peer_index_t destination, const uint8_t id, const char *method, struct parameter_queue *parameters) {
   struct rpc_package_head *head;
 
   head = (struct rpc_package_head*)calloc(1, sizeof(struct rpc_package_head));
@@ -161,18 +173,16 @@ struct rpc_package_head *protocol_package_create(enum rpc_package_type type, con
       request = &head->body->request;
 
       request->method_len = strlen(method);
-      request->parameter_len = strlen(parameter);
 
       request->method = malloc_and_copy(method, 0, request->method_len);
-      request->parameter = malloc_and_copy(parameter, 0, request->parameter_len);
+      request->queue = parameters;
 
       break;
 
     case RESPONSE:
       response = &(head->body->response);
 
-      response->result_len = strlen(method);
-      response->result = malloc_and_copy(method, 0, response->result_len);
+      response->queue = parameters;
 
       break;
   }
@@ -192,11 +202,11 @@ void protocol_package_free(struct rpc_package_head *head) {
 
     case REQUEST:
       free(head->body->request.method);
-      free(head->body->request.parameter);
+      parameter_queue_free(head->body->request.queue);
       break;
 
     case RESPONSE:
-      free(head->body->response.result);
+      parameter_queue_free(head->body->response.queue);
       break;
   }
 

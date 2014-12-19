@@ -178,14 +178,14 @@ void *_handle_peer_interconnect(void *arg) {
               break;
 
             case REQUEST:
-              LOG("[%d] receive an rpc request with method: %s and parameter: %s\n", self_index, head->body->request.method, head->body->request.parameter);
+              LOG("[%d] receive an rpc request with method: %s and parameter: %s\n", self_index, head->body->request.method, head->body->request.queue);
 
               queue_put(queue, head);
 
               break;
 
             case RESPONSE:
-              LOG("[%d] response an rpc request with result: %s\n", self_index, head->body->response.result);
+              LOG("[%d] response an rpc request with result: %s\n", self_index, head->body->response.queue);
 
               // TODO: 对 response 对象的后续处理
               protocol_package_free(head);
@@ -234,7 +234,13 @@ void *_peer_task_worker(void *arg) {
 
   // TODO: 编写业务的通用处理办法
   struct rpc_package_head *response;
-  response = protocol_package_create(RESPONSE, task->destination, task->source, task->id, "任务完成！Mission Completeion!", NULL);
+
+  struct parameter_queue *parameters;
+  char result = '\1';
+  parameters = parameter_queue_alloc();
+  parameter_queue_put(parameters, parameter_alloc(BOOLEAN, &result));
+
+  response = protocol_package_create(RESPONSE, task->destination, task->source, task->id, NULL, parameters);
 
   rpcpkg_len pkg_len, sended;
   char *data;
@@ -250,9 +256,6 @@ void *_peer_task_worker(void *arg) {
   if ((sended = st_write(peer_info->rpc_fd, data, pkg_len, ST_UTIME_NO_TIMEOUT)) != pkg_len) {
     ERR("[%d] 写回 RPC 包长度 %d 与原包长 %d 不符，错误信息：%s\n", self_index, sended, pkg_len, strerror(errno));
   }
-
-  free(data);
-  data = NULL;
 
   // 清理和结束
   protocol_package_free(task);
@@ -437,13 +440,25 @@ void _peer_simulate_request(const peer_index_t index) {
   // 模拟写入一个 RPC 包
   st_sleep(1);
 
-  peer_request(peer_info->name, "default.ping 于默认设置当中", "hold for 10s!是男人就坚持10秒钟");
+  struct parameter_queue *parameters;
+  parameters = parameter_queue_alloc();
+
+  float value = 3.1415926;
+  char message[] = "Hello RPC!";
+  parameter_queue_put(parameters, parameter_alloc(FLOAT32, &value));
+  parameter_queue_put(parameters, parameter_alloc(STRING, message));
+
+  peer_request(peer_info->name, "default.ping 于默认设置当中", parameters);
+
+  // 不需要在这里释放 parameters
+  // 因为在 peer_request 最后释放 rpc_package_head 的时候
+  // 顺带把 parameters 给清理了。
 }
 
-int peer_request(const char *peer_name, const char *method, const char *parameter) {
+int peer_request(const char *peer_name, const char *method, struct parameter_queue *parameter) {
   static uint8_t request_id = 0;
 
-  LOG("[%d] 准备发出一次 RPC 请求，目标结点：%s，方法：%s，参数：%s\n", self_index, peer_name, method, parameter);
+  LOG("[%d] 准备发出一次 RPC 请求，目标结点：%s，方法：%s，参数：%d\n", self_index, peer_name, method, parameter->count);
 
   peer_index_t dest_index;
   struct peer_info *peer_info;

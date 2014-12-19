@@ -45,17 +45,15 @@ struct rpc_package {
  */
 struct rpc_request {
   uint8_t   method_len;
-  uint16_t  parameter_len;
   char      *method;
-  char      *parameter;
+  struct parameter_queue  *queue;
 };
 
 /**
  * Response 数据体
  */
 struct rpc_response {
-  uint16_t  result_len;
-  char      *result;
+  struct parameter_queue  *queue;
 };
 
 /**
@@ -87,7 +85,7 @@ struct rpc_package_head {
 
 char *protocol_encode(const struct rpc_package_head *head, rpcpkg_len *cursor_result);
 struct rpc_package_head *protocol_decode(const struct rpc_package *package);
-struct rpc_package_head *protocol_package_create(enum rpc_package_type type, const peer_index_t source, const peer_index_t distination, const uint8_t id, const char *method, const char *parameter);
+struct rpc_package_head *protocol_package_create(enum rpc_package_type type, const peer_index_t source, const peer_index_t distination, const uint8_t id, const char *method, struct parameter_queue *parameter);
 
 
 void protocol_package_free(struct rpc_package_head *head);

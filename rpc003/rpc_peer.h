@@ -8,6 +8,7 @@
 #include <st.h>
 
 #include "rpc_protocol.h"
+#include "rpc_parameter.h"
 
 #ifndef _RPC_PEER_H
 #define _PRC_PEER_H
@@ -51,6 +52,6 @@ int peer_listen_and_interconnect(void);
 /**
  * 发出一个 rpc 请求，并返回该请求分配的 id 值
  */
-int peer_request(const char *peer_name, const char *method, const char *parameter);
+int peer_request(const char *peer_name, const char *method, struct parameter_queue *parameters);
 
 #endif
