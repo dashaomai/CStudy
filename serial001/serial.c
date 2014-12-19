@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <netinet/in.h>
 
 #include "serial.h"
 
@@ -12,6 +13,9 @@ struct serial_binary *serial_encode(struct parameter_queue *queue) {
   uint8_t *bytes;
   uint16_t total_length;
 
+  const uint16_t scala_head_length = 1 + 2;
+  const uint16_t array_head_length = 1 + 2 + 1 + 2;
+
   // 计算整个参数队列编码后的总长度
   total_length = sizeof(total_length); // 首先把两字节长度信息计算在内
 
@@ -21,11 +25,13 @@ struct serial_binary *serial_encode(struct parameter_queue *queue) {
   for (param = queue->head; param  != NULL; param = param->next) {
     switch (param->type) {
       case ARRAY:
-        total_length += sizeof(param->type) + sizeof(param->scala_type) + sizeof(param->length) + sizeof(param->scala_count) + param->length;
+        // total_length += sizeof(param->type) + sizeof(param->scala_type) + sizeof(param->length) + sizeof(param->scala_count) + param->length;
+        total_length += array_head_length + param->length;
         break;
 
       default:
-        total_length += sizeof(param->type) + sizeof(param->length) + param->length;
+        // total_length += sizeof(param->type) + sizeof(param->length) + param->length;
+        total_length += scala_head_length + param->length;
         break;
     }
   }
@@ -39,7 +45,7 @@ struct serial_binary *serial_encode(struct parameter_queue *queue) {
   // 复制参数队列唯一需要序列化的数量值
   uint16_t cursor, scala_offset, array_offset;
 
-  *(uint16_t*)bytes = htonl(total_length);
+  *(uint16_t*)bytes = htons(total_length);
   cursor = sizeof(total_length);
 
   bytes[cursor] = queue->count;
@@ -47,32 +53,31 @@ struct serial_binary *serial_encode(struct parameter_queue *queue) {
 
   param = queue->head;
 
-  scala_offset = sizeof(param->type) + sizeof(param->length);
-  array_offset = sizeof(param->type) + sizeof(param->length) + sizeof(param->scala_type) + sizeof(param->scala_count);
+  // 内存里变量排列都是按 32 位对齐方式，16 数也占 32 位字节
+  // 所以直接从内存中把结构体复制给二进制流的想法是错误的
+  // scala_offset = sizeof(param->type) + sizeof(param->length);
+  // array_offset = sizeof(param->type) + sizeof(param->length) + sizeof(param->scala_type) + sizeof(param->scala_count);
 
   for (param = queue->head; param != NULL; param = param->next) {
     // 复制参数头
     switch (param->type) {
       case ARRAY:
-        param->length = htons(param->length);
-        param->scala_count = htons(param->scala_count);
-
-        memcpy((void*)(bytes + cursor), &param->type, array_offset);
-        cursor += array_offset;
-
-        param->length = ntohs(param->length);
-        param->scala_count = ntohs(param->scala_count);
+        *(uint8_t*)(bytes + cursor) = param->type;
+        cursor += 1;
+        *(uint16_t*)(bytes + cursor) = htons(param->length);
+        cursor += 2;
+        *(uint8_t*)(bytes + cursor) = param->scala_type;
+        cursor += 1;
+        *(uint16_t*)(bytes + cursor) = htons(param->scala_count);
+        cursor += 2;
 
         break;
 
       default:
-
-        param->length = htons(param->length);
-
-        memcpy(bytes + cursor, &param->type, scala_offset);
-        cursor += scala_offset;
-
-        param->length = ntohs(param->length);
+        *(uint8_t*)(bytes + cursor) = param->type;
+        cursor += 1;
+        *(uint16_t*)(bytes + cursor) = htons(param->length);
+        cursor += 2;
 
         break;
     }
@@ -148,11 +153,11 @@ struct parameter_queue *serial_decode(struct serial_binary *binary) {
 
   // 逐个解码参数对象
   for (i = 0; i < count; i++) {
-    type = *(enum parameter_type*)(bytes + cursor);
-    cursor += sizeof(type);
+    type = *(uint8_t*)(bytes + cursor);
+    cursor += 1;
 
     length = ntohs(*(uint16_t*)(bytes + cursor));
-    cursor += sizeof(length);
+    cursor += 2;
 
     // 还是将参数与它的值空间分配到一起
     param = (struct parameter *)calloc(1, sizeof(struct parameter) + length);
@@ -162,11 +167,11 @@ struct parameter_queue *serial_decode(struct serial_binary *binary) {
 
     switch (type) {
       case ARRAY:
-        param->scala_type = *(enum parameter_type*)(bytes + cursor);
-        cursor += sizeof(param->scala_type);
+        param->scala_type = *(uint8_t*)(bytes + cursor);
+        cursor += 1;
 
         param->scala_count = ntohs(*(uint16_t*)(bytes + cursor));
-        cursor += sizeof(param->scala_count);
+        cursor += 2;
 
         break;
 

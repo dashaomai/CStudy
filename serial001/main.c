@@ -25,7 +25,7 @@ int main(int argc, const char *argv[])
 
   float float16s[] = { 3.14, 0.618, 0., -15.5f };
 
-  printf("Construction an array with %lu float16_t(s)\n", sizeof(float16s) / sizeof(float16s[0]));
+  printf("Construction an array with %u float16_t(s)\n", sizeof(float16s) / sizeof(float16s[0]));
 
   parameter_queue_put(queue, parameter_alloc(UINT16, &(uint16)));
   parameter_queue_put(queue, parameter_alloc(INT16, &(int16)));
