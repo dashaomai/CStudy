@@ -13,8 +13,8 @@ struct serial_binary *serial_encode(struct parameter_queue *queue) {
   uint8_t *bytes;
   uint16_t total_length;
 
-  const uint16_t scala_head_length = 1 + 2;
-  const uint16_t array_head_length = 1 + 2 + 1 + 2;
+  const uint16_t scala_head_length = 1 + 2;           // type(1b) + length(2b)
+  const uint16_t array_head_length = 1 + 2 + 1 + 2;   // type(1b) + length(2b) + scala_type(1b) + scala_count(2b)
 
   // 计算整个参数队列编码后的总长度
   total_length = sizeof(total_length); // 首先把两字节长度信息计算在内
