@@ -1,6 +1,6 @@
 ST_ROOT = ~/Libs/CLibs/state-threads/obj/
 CC = cc
-COMPILE = -g -c -I $(ST_ROOT)
+COMPILE = -O3 -c -I $(ST_ROOT)
 LINK =
 
 all : stmain.o
