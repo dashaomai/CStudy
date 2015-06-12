@@ -9,8 +9,9 @@
 int main(int argc, const char *argv[])
 {
   uint16_t *arr;
-  int size = sizeof(uint16_t) * LEN;
   uint16_t *arr1, *arr2, *arr3, *arr4, *arr5;
+
+  int size = sizeof(uint16_t) * LEN;
   uint16_t v;
 
   arr = (uint16_t*)malloc(size * COUNT);
