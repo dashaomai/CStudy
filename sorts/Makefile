@@ -1,5 +1,5 @@
 CC = cc
-COMPILE = -g -c -std=c99
+COMPILE = -Wall -g -c -std=c99
 LINK =
 EXE = sorts
 
